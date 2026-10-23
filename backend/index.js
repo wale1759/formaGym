@@ -61,4 +61,5 @@ export function createApp({ store = createStore() } = {}) {
   return app;
 }
 export const app = createApp();
-if (process.argv[1] === fileURLToPath(import.meta.url)) app.listen(process.env.PORT || 3001, () => console.log(`FORMA API: http://localhost:${process.env.PORT || 3001}`));
+export default app;
+if (!process.env.VERCEL && process.argv[1] === fileURLToPath(import.meta.url)) app.listen(process.env.PORT || 3001, () => console.log(`FORMA API: http://localhost:${process.env.PORT || 3001}`));
