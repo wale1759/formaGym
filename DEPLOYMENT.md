@@ -1,4 +1,4 @@
-﻿# Release workflow
+# Release workflow
 
 The local repository has two branches:
 
@@ -48,4 +48,10 @@ The deployed backend still needs `MONGODB_URI` and `MONGODB_DB` configured in Ve
 
 Admin sessions now live in MongoDB `adminSessions`, shared across backend instances and redeployments. Only a SHA-256 digest of each random 256-bit token is stored; the token stays in the HTTP-only cookie. Sessions expire after eight hours, are checked on every admin request, and are deleted on logout. Signing in again from the same browser rotates its session. Expired records are rejected immediately and removed when encountered or during later sign-ins. An expiry index supports cleanup; it is not a TTL index because the project stores timestamps as ISO strings.
 
-Deploy the updated backend with access to the same MongoDB database. Collection validation and indexes are installed automatically. Existing memory-only admin sessions cannot migrate: administrators must sign in once after deployment. No new session secret environment variable is required. Member sessions and rate-limit counters still use instance memory and are outside this admin-session update.
+Deploy the updated backend with access to the same MongoDB database. Collection validation and indexes are installed automatically. Existing memory-only admin sessions cannot migrate: administrators must sign in once after deployment. No new session secret environment variable is required. Rate-limit counters still use instance memory.
+
+### Member dashboard reliability
+
+Member sessions now use the shared MongoDB `memberSessions` collection, following the same token hashing, eight-hour expiry, rotation and logout rules as admin sessions. Both signup and signin await session persistence before returning success. This keeps dashboard access available when later requests reach different backend instances. Existing memory-only member sessions require a fresh signin after deployment. Rate-limit counters still use instance memory.
+
+Management can select **Review pending memberships** from the dashboard to open the pending queue. Confirming a pending request records its dates and links an existing member account; the member dashboard then shows the accepted plan and expiry. A second confirmation is rejected. Deploy frontend and backend changes together to make these updates live.

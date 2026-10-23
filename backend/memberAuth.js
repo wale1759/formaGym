@@ -1,27 +1,22 @@
+import { createSessionStore, sessionDuration as duration } from './sessionStore.js';
 import { currentMembership, upgradeOptions } from './membershipTiers.js';
 import { validateMembership, membershipStatus } from './validation/membership.js';
 import { getPricing } from './pricing.js';
 import { recordActivity } from './database.js';
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { validateSignin } from './validation/signin.js';
 
 const derive = promisify(scrypt);
-const duration = 8 * 60 * 60 * 1000;
 export function registerMemberAuth(app, store) {
-  const sessions = new Map();
+  const sessions = createSessionStore(store, 'memberSessions', profile => ({ memberId: profile.id, name: profile.name, email: profile.email }));
   const attempts = new Map();
   const cookieOptions = { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/api/member' };
-  function createSession(req, res, user) {
-    const now = Date.now();
-    for (const [key, session] of sessions) if (session.expires <= now) sessions.delete(key);
-      const previous = /(?:^|;\s*)forma_member=([a-f0-9]+)/.exec(req.headers.cookie || '')?.[1];
-      if (previous) sessions.delete(previous);
-      const token = randomBytes(32).toString('hex');
-      const profile = { id: user.id, name: user.name, email: user.email };
-      sessions.set(token, { profile, expires: now + duration });
-      res.cookie('forma_member', token, { ...cookieOptions, maxAge: duration });
-
+  async function createSession(req, res, user) {
+    const previous = /(?:^|;\s*)forma_member=([a-f0-9]+)/.exec(req.headers.cookie || '')?.[1];
+    const profile = { id: user.id, name: user.name, email: user.email };
+    const token = await sessions.create(profile, previous);
+    res.cookie('forma_member', token, { ...cookieOptions, maxAge: duration });
     return profile;
   }
   app.use('/api/member', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
@@ -45,18 +40,17 @@ export function registerMemberAuth(app, store) {
       await store.incrementSignIn(user.id);
       await recordActivity(store, { actor: 'member', actorId: user.id, email: user.email, action: 'member_login' });
       attempts.delete(req.ip);
-      const profile = createSession(req, res, user);
+      const profile = await createSession(req, res, user);
       res.json({ user: profile });
     } catch (error) { next(error); }
   });
-  app.use('/api/member', (req, res, next) => {
+  app.use('/api/member', async (req, res, next) => {
     const token = /(?:^|;\s*)forma_member=([a-f0-9]+)/.exec(req.headers.cookie || '')?.[1];
-    const session = sessions.get(token);
-    if (!session || session.expires <= Date.now()) {
-      sessions.delete(token);
+    const session = await sessions.find(token);
+    if (!session) {
       return res.status(401).json({ error: 'Please sign in to your member account.' });
     }
-    req.member = session.profile;
+    req.member = { id: session.memberId, name: session.name, email: session.email };
     req.memberToken = token;
     next();
   });
@@ -101,7 +95,7 @@ export function registerMemberAuth(app, store) {
   });
   app.post('/api/member/logout', async (req, res, next) => {
     try {
-    sessions.delete(req.memberToken);
+    await sessions.revoke(req.memberToken);
     res.clearCookie('forma_member', cookieOptions);
     await recordActivity(store, { actor: 'member', actorId: req.member.id, email: req.member.email, action: 'member_logout' });
     res.json({ authenticated: false });

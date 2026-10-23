@@ -557,3 +557,61 @@ test('admin sessions survive a fresh backend instance, rotate and revoke across 
     await connection.close();
   }
 });
+
+test('signup and signin dashboards survive backend changes and show admin-approved plans', async () => {
+  const connection = createStore({ uri: mongo.getUri(), database: 'forma_test' });
+  const first = createApp({ store }).listen(0, '127.0.0.1');
+  const second = createApp({ store: connection }).listen(0, '127.0.0.1');
+  await Promise.all([first, second].map(instance => new Promise(resolve => instance.once('listening', resolve))));
+  const send = (instance, path, cookie, body) => fetch(`http://127.0.0.1:${instance.address().port}${path}`, {
+    method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const signup = { ...valid, email: 'persistent-member@example.com' };
+  try {
+    const response = await send(first, '/api/signup', null, signup);
+    assert.equal(response.status, 201);
+    const cookie = response.headers.get('set-cookie').split(';')[0];
+    const { createHash } = await import('node:crypto');
+    const digest = value => createHash('sha256').update(value.split('=')[1]).digest('hex');
+    const saved = await connection.find('memberSessions', { id: digest(cookie) });
+    assert.ok(saved);
+    assert.equal(JSON.stringify(saved).includes(cookie.split('=')[1]), false);
+    await new Promise(resolve => first.close(resolve));
+    assert.equal((await send(second, '/api/member/session', cookie)).status, 200);
+    assert.equal((await send(second, '/api/member/dashboard', cookie)).status, 200);
+    assert.equal((await send(second, '/api/admin/activity', cookie)).status, 401);
+    const startDate = new Date().toISOString().slice(0, 10);
+    const request = await send(second, '/api/member/memberships', cookie, { plan: 'Standard', billing: 'monthly', startDate });
+    assert.equal(request.status, 201);
+    const { id } = await request.json();
+    const admin = await send(second, '/api/admin/login', null, credentials);
+    const adminCookie = admin.headers.get('set-cookie').split(';')[0];
+    assert.equal((await send(second, `/api/admin/memberships/${id}/confirm`, adminCookie, {})).status, 200);
+    assert.equal((await send(second, `/api/admin/memberships/${id}/confirm`, adminCookie, {})).status, 409);
+    const dashboard = await (await send(second, '/api/member/dashboard', cookie)).json();
+    assert.equal(dashboard.currentMembershipId, id);
+    assert.equal(dashboard.memberships[0].plan, 'Standard');
+    assert.equal(dashboard.memberships[0].status, 'active');
+    assert.equal(dashboard.memberships[0].startDate, startDate);
+    assert.ok(dashboard.memberships[0].expiresAt);
+    assert.deepEqual(dashboard.upgradeOptions, ['Premium', 'VIP']);
+    const login = await send(second, '/api/member/login', cookie, { email: signup.email, password: signup.password });
+    assert.equal(login.status, 200);
+    const nextCookie = login.headers.get('set-cookie').split(';')[0];
+    assert.equal((await send(second, '/api/member/dashboard', cookie)).status, 401);
+    assert.equal((await send(second, '/api/member/dashboard', nextCookie)).status, 200);
+    assert.equal((await send(second, '/api/member/logout', nextCookie, {})).status, 200);
+    assert.equal(await connection.find('memberSessions', { id: digest(nextCookie) }), null);
+    assert.equal((await send(second, '/api/member/dashboard', nextCookie)).status, 401);
+    const finalLogin = await send(second, '/api/member/login', null, { email: signup.email, password: signup.password });
+    const expired = finalLogin.headers.get('set-cookie').split(';')[0];
+    await connection.update('memberSessions', { id: digest(expired) }, { expiresAt: new Date(Date.now() - 1000).toISOString() });
+    assert.equal((await send(second, '/api/member/dashboard', expired)).status, 401);
+    assert.equal(await connection.find('memberSessions', { id: digest(expired) }), null);
+  } finally {
+    if (first.listening) await new Promise(resolve => first.close(resolve));
+    await new Promise(resolve => second.close(resolve));
+    await connection.close();
+  }
+});

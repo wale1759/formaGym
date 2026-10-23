@@ -1,3 +1,4 @@
+import memberSessions from './memberSessions.js';
 import adminSessions from './adminSessions.js';
 import profilePhotos from './profilePhotos.js';
 import administrators from './administrators.js';
@@ -12,7 +13,7 @@ import subscriptions from './subscriptions.js';
 import activity from './activity.js';
 import settings from './settings.js';
 
-export const schemas = { adminSessions, profilePhotos, administrators, users, memberships, bookings, orders, contacts, subscriptions, activity, settings };
+export const schemas = { memberSessions, adminSessions, profilePhotos, administrators, users, memberships, bookings, orders, contacts, subscriptions, activity, settings };
 const ajv = new Ajv({ allErrors: true, useDefaults: true, strict: false });
 const validators = Object.fromEntries(Object.entries(schemas).map(([name, schema]) => [name, ajv.compile(schema)]));
 export function prepareDocument(type, input, { touch = false } = {}) {

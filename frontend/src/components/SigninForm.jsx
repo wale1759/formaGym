@@ -1,3 +1,4 @@
+import FormInput from './FormInput.jsx';
 import { useEffect, useState } from 'react';
 import { validateSignin } from '../validation/signin.js';
 function openDashboard() {
@@ -35,6 +36,6 @@ export default function SigninForm() {
   }
   return <section className="page-section account-panel card auth-page"><span className="eyebrow">MEMBER SIGN IN</span><h2>Sign in to your member account</h2><p>Open your personal membership dashboard.</p>
     {message && <p role="alert" className="error">{message}</p>}
-    <form noValidate onSubmit={submit}>{[['email', 'Email address', 'email', 'username'], ['password', 'Password', 'password', 'current-password']].map(([name,label,type,autoComplete]) => <label key={name} htmlFor={`signin-${name}`}>{label}<input id={`signin-${name}`} name={name} aria-label={label} type={type} autoComplete={autoComplete} maxLength={name === 'email' ? 254 : 128} required aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `signin-${name}-error` : undefined}/>{errors[name] && <span id={`signin-${name}-error`} className="error">{errors[name]}</span>}</label>)}<button className="button" disabled={busy}>{busy ? 'Please wait...' : 'Sign in'}</button></form><p>New to FORMA? <a href="#Signup">Create an account</a></p>
+    <form noValidate onSubmit={submit}>{[['email', 'Email address', 'email', 'username'], ['password', 'Password', 'password', 'current-password']].map(([name,label,type,autoComplete]) => <label key={name} htmlFor={`signin-${name}`}>{label}<FormInput passwordLabel={label} id={`signin-${name}`} name={name} aria-label={label} type={type} autoComplete={autoComplete} maxLength={name === 'email' ? 254 : 128} required aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `signin-${name}-error` : undefined}/>{errors[name] && <span id={`signin-${name}-error`} className="error">{errors[name]}</span>}</label>)}<button className="button" disabled={busy}>{busy ? 'Please wait...' : 'Sign in'}</button></form><p>New to FORMA? <a href="#Signup">Create an account</a></p>
   </section>;
 }

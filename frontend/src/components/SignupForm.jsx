@@ -1,3 +1,4 @@
+import FormInput from './FormInput.jsx';
 import { useState } from 'react';
 import { validateSignup } from '../validation/signup.js';
 export default function SignupForm() {
@@ -24,7 +25,7 @@ export default function SignupForm() {
     <span className="eyebrow">CREATE YOUR MEMBER ACCOUNT</span><h2>Sign up for FORMA</h2><p>Create your account, then choose and track your membership from your dashboard.</p>
     {message && <p role="alert" className="error">{message}</p>}
     <form noValidate onSubmit={submit}>
-      {[['name', 'Full name', 'text', 'name'], ['email', 'Email address', 'email', 'email'], ['password', 'Password', 'password', 'new-password'], ['confirmPassword', 'Confirm password', 'password', 'new-password']].map(([name, label, type, autoComplete]) => <label key={name} htmlFor={`signup-${name}`}>{label}<input id={`signup-${name}`} name={name} aria-label={label} type={type} autoComplete={autoComplete} required maxLength={name === 'name' ? 80 : name === 'email' ? 254 : 128} aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `${name}-error` : undefined}/>{name === 'password' && <span className="fine">Use between 12 and 128 characters.</span>}{errors[name] && <span id={`${name}-error`} className="error">{errors[name]}</span>}</label>)}
+      {[['name', 'Full name', 'text', 'name'], ['email', 'Email address', 'email', 'email'], ['password', 'Password', 'password', 'new-password'], ['confirmPassword', 'Confirm password', 'password', 'new-password']].map(([name, label, type, autoComplete]) => <label key={name} htmlFor={`signup-${name}`}>{label}<FormInput passwordLabel={label} id={`signup-${name}`} name={name} aria-label={label} type={type} autoComplete={autoComplete} required maxLength={name === 'name' ? 80 : name === 'email' ? 254 : 128} aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `${name}-error` : undefined}/>{name === 'password' && <span className="fine">Use between 12 and 128 characters.</span>}{errors[name] && <span id={`${name}-error`} className="error">{errors[name]}</span>}</label>)}
       <p className="fine">Creating an account does not activate a paid plan. Membership requests are reviewed by management.</p>
       <label className="checkbox-label"><input type="checkbox" name="acceptTerms" aria-invalid={!!errors.acceptTerms} aria-describedby={errors.acceptTerms ? 'terms-error' : undefined}/>I accept the account terms above.</label>{errors.acceptTerms && <p id="terms-error" className="error">{errors.acceptTerms}</p>}
       <button className="button" disabled={busy}>{busy ? 'Creating account...' : 'Create account'}</button>

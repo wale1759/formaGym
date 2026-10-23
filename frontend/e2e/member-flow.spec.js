@@ -101,3 +101,61 @@ test('account navigation and layouts work on phones, tablets and laptops', async
     }
   }
 });
+
+test('management can find pending requests and confirm membership from the dashboard', async ({ page }) => {
+  const membership = { id: 'review-request', email: 'member@example.com', plan: 'Starter', billing: 'monthly', startDate: '2026-10-24', status: 'pending', createdAt: '2026-10-24T00:00:00Z' };
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/pricing') return route.fulfill({ json: { prices, currency: 'NGN' } });
+    if (path === '/api/member/session') return route.fulfill({ status: 401, json: { error: 'Please sign in.' } });
+    if (path === '/api/admin/activity') return route.fulfill({ json: {
+      counts: { users: 1, memberships: 1 }, members: [], memberships: [membership], activity: [],
+    } });
+    if (path === '/api/admin/memberships/review-request/confirm') {
+      expect(route.request().method()).toBe('POST');
+      Object.assign(membership, { status: 'active', expiresAt: '2026-11-24T00:00:00Z', confirmedAt: '2026-10-24T12:00:00Z', confirmedBy: 'manager@example.com' });
+      return route.fulfill({ json: { membership } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.goto('/#Admin');
+  await page.getByRole('button', { name: 'Review pending memberships (1)' }).click();
+  await expect(page.getByRole('button', { name: 'Confirm membership', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm membership', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('membership accepted');
+  await expect(page.getByRole('button', { name: 'Review pending memberships (0)' })).toBeVisible();
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(page.locator('.admin-table')).toContainText('Accepted');
+  await expect(page.getByRole('button', { name: 'Link member account' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Confirm membership', exact: true })).toHaveCount(0);
+});
+
+test('password visibility controls preserve values and work independently for members and administrators', async ({ page }) => {
+  await mockApi(page);
+  async function check(field, label) {
+    await field.fill('example-password-for-preview');
+    await expect(field).toHaveAttribute('type', 'password');
+    await page.getByRole('button', { name: `Show ${label}`, exact: true }).click();
+    await expect(field).toHaveAttribute('type', 'text');
+    await expect(field).toHaveValue('example-password-for-preview');
+    await page.getByRole('button', { name: `Hide ${label}`, exact: true }).click();
+    await expect(field).toHaveAttribute('type', 'password');
+  }
+  await page.goto('/#Signup');
+  await check(page.locator('#signup-password'), 'password');
+  await check(page.locator('#signup-confirmPassword'), 'confirm password');
+  await page.getByRole('button', { name: 'Show password', exact: true }).click();
+  await expect(page.locator('#signup-confirmPassword')).toHaveAttribute('type', 'password');
+  await expect(page).toHaveURL(/#Signup$/);
+  await page.goto('/#Signin');
+  await check(page.locator('#signin-password'), 'password');
+  await page.goto('/#Admin');
+  await check(page.locator('#admin-login-password'), 'password');
+  await page.route('**/api/admin/activity', route => route.fulfill({ json: { counts: {}, members: [], memberships: [], activity: [] } }));
+  await page.route('**/api/admin/administrators', route => route.fulfill({ json: { administrators: [] } }));
+  await page.reload();
+  await page.getByRole('button', { name: 'Administrators', exact: true }).click();
+  await check(page.locator('#administrator-password'), 'password');
+  await check(page.locator('#administrator-confirmPassword'), 'confirm password');
+  await expect(page.getByRole('heading', { name: 'Add an administrator' })).toBeVisible();
+});

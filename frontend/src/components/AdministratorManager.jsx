@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from 'react';
+import FormInput from './FormInput.jsx';
+import { useEffect, useState } from 'react';
 
 export default function AdministratorManager() {
   const [administrators, setAdministrators] = useState([]);
@@ -41,7 +42,7 @@ export default function AdministratorManager() {
     <div className="card account-panel"><h2>Add an administrator</h2><p>New administrators have full management access, including pricing, member records and adding other administrators.</p>
       {error && <p className="error" role="alert">{error}</p>}{message && <p role="status">{message}</p>}
       <form noValidate onSubmit={create}>
-        {[['username', 'Username', 'text', 'off'], ['email', 'Email address', 'email', 'off'], ['password', 'Password', 'password', 'new-password'], ['confirmPassword', 'Confirm password', 'password', 'new-password']].map(([name, label, type, autoComplete]) => <label key={name} htmlFor={`administrator-${name}`}>{label}<input id={`administrator-${name}`} name={name} type={type} autoComplete={autoComplete} maxLength={name === 'username' ? 32 : name === 'email' ? 254 : 128} required aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `administrator-${name}-error` : undefined}/>{errors[name] && <span className="error" id={`administrator-${name}-error`}>{errors[name]}</span>}</label>)}
+        {[['username', 'Username', 'text', 'off'], ['email', 'Email address', 'email', 'off'], ['password', 'Password', 'password', 'new-password'], ['confirmPassword', 'Confirm password', 'password', 'new-password']].map(([name, label, type, autoComplete]) => <label key={name} htmlFor={`administrator-${name}`}>{label}<FormInput passwordLabel={label} id={`administrator-${name}`} name={name} type={type} autoComplete={autoComplete} maxLength={name === 'username' ? 32 : name === 'email' ? 254 : 128} required aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `administrator-${name}-error` : undefined}/>{errors[name] && <span className="error" id={`administrator-${name}-error`}>{errors[name]}</span>}</label>)}
         <p className="fine">Choose a unique password of 12–128 characters. Passwords cannot be viewed after creation.</p><button className="button" disabled={busy}>{busy ? 'Creating...' : 'Create administrator'}</button>
       </form>
     </div>

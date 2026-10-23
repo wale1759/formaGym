@@ -17,6 +17,7 @@ export function createStore({ uri = process.env.MONGODB_URI, database = process.
           await databaseHandle.collection(name).createIndex({ createdAt: -1 });
         }
         await databaseHandle.collection('adminSessions').createIndex({ expiresAt: 1 });
+        await databaseHandle.collection('memberSessions').createIndex({ expiresAt: 1 });
         await databaseHandle.collection('users').createIndex({ email: 1 }, { unique: true });
         await databaseHandle.collection('administrators').createIndex({ email: 1 }, { unique: true });
         await databaseHandle.collection('administrators').createIndex({ username: 1 }, { unique: true });

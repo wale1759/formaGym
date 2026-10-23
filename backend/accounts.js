@@ -30,7 +30,7 @@ export function registerAccounts(app, { store }) {
       const hash = (await derive(value.password, salt, 64)).toString('hex');
       const user = await store.insert('users', { name: value.name, email: value.email, role: 'member', salt, hash });
       await audit({ actor: 'member', actorId: user.id, email: user.email, action: 'signup', target: user.id });
-      memberAuth.createSession(req, res, user);
+      await memberAuth.createSession(req, res, user);
       res.status(201).json({ id: user.id, name: user.name });
     } catch (error) {
       if (error.code === 11000) return res.status(409).json({ error: 'An account already exists for this email.', errors: { email: 'This email is already registered.' } });

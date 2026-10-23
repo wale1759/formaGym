@@ -1,3 +1,4 @@
+import FormInput from './FormInput.jsx';
 import AdminProfile from './AdminProfile.jsx';
 import AdministratorManager from './AdministratorManager.jsx';
 import PricingEditor from './PricingEditor.jsx';
@@ -59,6 +60,7 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/admin/memberships/${encodeURIComponent(id)}/confirm`, { method: 'POST' });
       const result = await response.json();
+      if (response.status === 401) setData(null);
       if (!response.ok) throw new Error(result.error || 'Unable to confirm membership.');
       setData(current => current ? { ...current, memberships: current.memberships.map(plan => plan.id === id ? result.membership : plan) } : current);
       setConfirmationMessage(`${result.membership.plan} membership accepted for ${result.membership.email}. Access: ${result.membership.startDate} to ${new Date(result.membership.expiresAt).toISOString().slice(0,10)}.`);
@@ -76,13 +78,14 @@ export default function AdminDashboard() {
     } catch (error) { setError(error.message); }
     finally { setBusy(false); }
   }
+  const pendingCount = data?.memberships.filter(plan => plan.status === 'pending').length || 0;
   const matches = item => [item.name, item.email, item.plan, item.action, item.target].some(value => String(value || '').toLowerCase().includes(search.toLowerCase()));
   return <section className="page-section admin-dashboard">
     {error && <p className="error" role="alert">{error}</p>}
     {confirmationMessage && <p className="card" role="status">{confirmationMessage}</p>}
-    {!data ? <div className="card account-panel"><h2>Management sign-in</h2><p>Sign in with your gym administrator credentials.</p><form onSubmit={login}><label>Username or email<input name="email" type="text" autoComplete="username" required maxLength={254}/></label><label>Password<input name="password" type="password" autoComplete="current-password" required maxLength={128}/></label><button className="button" disabled={busy}>{busy ? 'Please wait...' : 'Sign in'}</button></form></div> : <>
+    {!data ? <div className="card account-panel"><h2>Management sign-in</h2><p>Sign in with your gym administrator credentials.</p><form onSubmit={login}><label>Username or email<input name="email" type="text" autoComplete="username" required maxLength={254}/></label><label>Password<FormInput id="admin-login-password" name="password" type="password" autoComplete="current-password" required maxLength={128}/></label><button className="button" disabled={busy}>{busy ? 'Please wait...' : 'Sign in'}</button></form></div> : <>
       {data.currentAdmin && <AdminProfile profile={data.currentAdmin} onChanged={profile => setData(current => current ? { ...current, currentAdmin: profile } : current)}/>}
-      <div className="admin-actions"><button className="button" disabled={busy} onClick={load}>{busy ? 'Refreshing...' : 'Refresh dashboard'}</button><button className="button secondary" disabled={busy} onClick={logout}>Sign out</button></div>
+      <div className="admin-actions"><button className="button secondary" disabled={busy} onClick={() => { setTab('Memberships'); setFilter('pending'); setSearch(''); }}>Review pending memberships ({pendingCount})</button><button className="button" disabled={busy} onClick={load}>{busy ? 'Refreshing...' : 'Refresh dashboard'}</button><button className="button secondary" disabled={busy} onClick={logout}>Sign out</button></div>
       <div className="grid three">{Object.entries(data.counts).map(([type, count]) => <div className="card metric" key={type}><h3>{count}</h3><p>{labels[type]}</p></div>)}</div>
       <div className="filters" aria-label="Dashboard sections">{['Members', 'Memberships', 'Pricing', 'Administrators', 'Activity'].map(name => <button key={name} className={tab === name ? 'selected' : ''} onClick={() => { setTab(name); setFilter('All'); }}>{name}</button>)}</div>
       <input className="search" aria-label={`Search ${tab.toLowerCase()}`} placeholder="Search by name, email, plan or activity..." value={search} onChange={event => setSearch(event.target.value)}/>

@@ -1,7 +1,7 @@
 import { ArrowUpRight, Heart, Menu, ShoppingBag, X } from 'lucide-react';
 export default function Header({ pages, page, menu, setMenu, cart, go, setModal, member, sessionLoading, onSignOut }) {
   const authPage = page === 'Signup' || page === 'Signin';
-  const links = member ? [['Dashboard', 'My dashboard'], ['Bookings', 'Classes'], ['Workouts', 'Workouts'], ['Nutrition', 'Nutrition']] : [...(!authPage ? [['Signup', 'Sign up'], ['Signin', 'Sign in']] : []), ...pages.filter(name => name !== 'Shop').map(name => [name, name])];
+  const links = member ? [['Dashboard', 'My dashboard'], ['Bookings', 'Classes'], ['Workouts', 'Workouts'], ['Nutrition', 'Nutrition']] : pages.filter(name => !['Shop', 'Signup', 'Signin'].includes(name)).map(name => [name, name]);
   return <header className={member ? 'member-header' : ''}>
     <a href={member ? '#Dashboard' : '#'} className="logo" onClick={() => go(member ? 'Dashboard' : 'Home')}><img src="/assets/forma-logo-transparent.png" alt="FORMA"/></a>
     {!sessionLoading && <><nav className={menu ? 'open' : ''} aria-label={member ? 'Member navigation' : 'Main navigation'}>{links.map(([name, label]) => <a className={page === name ? 'current' : ''} aria-current={page === name ? 'page' : undefined} href={`#${name}`} key={name} onClick={() => go(name)}>{label}</a>)}</nav>
