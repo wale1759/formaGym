@@ -283,3 +283,34 @@ test('ordinary administrators can accept instructor bookings in the new manageme
   await expect(page.locator('.instructor-management .admin-table')).toContainText('Accepted');
   await expect(page.getByRole('button', { name: 'Accept booking', exact: true })).toHaveCount(0);
 });
+
+test('public header gives join priority and moves sign-in into the mobile menu', async ({ page }) => {
+  await mockApi(page);
+  for (const width of [320, 390, 760, 768, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const signin = page.locator('header').getByRole('button', { name: 'Sign in', exact: true });
+    const join = page.locator('header').getByRole('button', { name: 'Join now' });
+    await expect(join).toBeVisible();
+    expect(Math.round((await join.boundingBox()).height)).toBe(44);
+    expect(await join.evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(211, 36, 59)');
+    if (width <= 760) {
+      await expect(signin).toBeHidden();
+      await page.getByRole('button', { name: 'Toggle navigation' }).click();
+      const mobileSignin = page.locator('nav').getByRole('link', { name: 'Sign in', exact: true });
+      await expect(mobileSignin).toBeVisible();
+      expect(await page.locator('nav a').first().textContent()).toBe('Sign in');
+      await mobileSignin.click();
+      await expect(page.getByRole('button', { name: 'Toggle navigation' })).toHaveAttribute('aria-expanded', 'false');
+    } else {
+      await expect(signin).toBeVisible();
+      expect(Math.round((await signin.boundingBox()).height)).toBe(44);
+      expect(await signin.evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+      await signin.click();
+    }
+    await expect(page).toHaveURL(/#Signin$/);
+    await expect(page.locator('#signin-email')).toBeVisible();
+    await expect(page.locator('header').getByRole('button', { name: 'Join now' })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});

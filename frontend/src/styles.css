@@ -249,3 +249,30 @@ main, main > *, .grid > *, .membership-overview > * { min-width: 0; }
 .status.booking-pending { color: #f1cf83; background: #6d4e172e; }
 .status.booking-confirmed { color: #8ee0b6; background: #22413566; }
 @media (max-width: 760px) { .instructor-grid.three { grid-template-columns: minmax(0,1fr); } .instructor-grid .trainer > img { height: 300px; } }
+
+.header-signin { white-space: nowrap; }
+@media (max-width: 600px) {
+  header .logo img { width: clamp(96px, 28vw, 140px); }
+  .header-actions > .bag { display: none; }
+  .header-actions .join { white-space: nowrap; font-size: 13px; padding: 10px; gap: 6px; }
+}
+@media (max-width: 450px) {
+  .header-actions { gap: 6px; }
+  .header-actions .join svg { display: none; }
+}
+@media (max-width: 360px) {
+  header { gap: 8px; }
+  .header-actions { gap: 4px; }
+  .header-actions .join { font-size: 12px; padding: 10px 8px; }
+}
+
+.header-auth-actions { display: inline-flex; align-items: center; gap: 10px; }
+header .header-auth-actions .join { min-height: 44px; padding: 10px 16px; border-radius: 8px; font-size: 14px; line-height: 1.2; white-space: nowrap; }
+header .header-signin { background: transparent; border-color: #646c7b; }
+header .header-signin:hover { background: #252a34; border-color: #a3a6b0; }
+nav .header-mobile-signin { display: none; }
+@media (max-width: 760px) {
+  header .header-auth-actions .header-signin { display: none; }
+  header .logo img { width: clamp(120px, 36vw, 180px); }
+  nav.open .header-mobile-signin { display: flex; align-items: center; justify-content: center; flex-basis: 100%; min-height: 44px; padding: 10px 16px; border: 1px solid #646c7b; border-radius: 8px; color: #fff; font-weight: 600; }
+}
