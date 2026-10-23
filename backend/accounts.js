@@ -90,6 +90,7 @@ export function registerAccounts(app, { store }) {
     } catch (error) { next(error); }
   });
   app.post('/api/admin/administrators', async (req, res, next) => {
+    if (req.adminId !== 'environment-owner') return res.status(403).json({ error: 'Only the gym owner can add administrators.' });
     const { errors, value } = validateAdministrator(req.body);
     if (value.email === process.env.ADMIN_EMAIL?.trim().toLowerCase()) errors.email = 'This email belongs to the configured management account.';
     if (Object.keys(errors).length) return res.status(400).json({ error: 'Please check the highlighted fields.', errors });

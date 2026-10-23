@@ -1,7 +1,7 @@
 import FormInput from './FormInput.jsx';
 import { useEffect, useState } from 'react';
 
-export default function AdministratorManager() {
+export default function AdministratorManager({ canCreate = false }) {
   const [administrators, setAdministrators] = useState([]);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState({});
@@ -18,6 +18,7 @@ export default function AdministratorManager() {
   }, []);
   async function create(event) {
     event.preventDefault();
+    if (!canCreate) return;
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form));
     const issues = {};
@@ -39,14 +40,15 @@ export default function AdministratorManager() {
     finally { setBusy(false); }
   }
   return <>
-    <div className="card account-panel"><h2>Add an administrator</h2><p>New administrators have full management access, including pricing, member records and adding other administrators.</p>
+    {!canCreate && <p>Only the gym owner can add administrators.</p>}
+    {canCreate && <div className="card account-panel"><h2>Add an administrator</h2><p>New administrators can manage pricing and member records. Only the gym owner can add administrators.</p>
       {error && <p className="error" role="alert">{error}</p>}{message && <p role="status">{message}</p>}
       <form noValidate onSubmit={create}>
         {[['username', 'Username', 'text', 'off'], ['email', 'Email address', 'email', 'off'], ['password', 'Password', 'password', 'new-password'], ['confirmPassword', 'Confirm password', 'password', 'new-password']].map(([name, label, type, autoComplete]) => <label key={name} htmlFor={`administrator-${name}`}>{label}<FormInput passwordLabel={label} id={`administrator-${name}`} name={name} type={type} autoComplete={autoComplete} maxLength={name === 'username' ? 32 : name === 'email' ? 254 : 128} required aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `administrator-${name}-error` : undefined}/>{errors[name] && <span className="error" id={`administrator-${name}-error`}>{errors[name]}</span>}</label>)}
         <p className="fine">Choose a unique password of 12–128 characters. Passwords cannot be viewed after creation.</p><button className="button" disabled={busy}>{busy ? 'Creating...' : 'Create administrator'}</button>
       </form>
-    </div>
-    <h2>Administrator accounts</h2><p>The original management account stays configured in the server environment. The list below shows additional administrators.</p>
+    </div>}
+    <h2>Administrator accounts</h2><p>Administrator accounts registered with the gym. Only the gym owner can create additional accounts.</p>
     <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th scope="col">Username / email</th><th scope="col">Created</th><th scope="col">Created by</th><th scope="col">Last sign-in</th></tr></thead><tbody>{administrators.map(admin => <tr key={admin.id}><td><strong>{admin.username}</strong><br/>{admin.email}</td><td>{new Date(admin.createdAt).toLocaleString('en-AU', { timeZone: 'Australia/Brisbane' })}</td><td>{admin.createdBy}</td><td>{admin.lastSignInAt ? new Date(admin.lastSignInAt).toLocaleString('en-AU', { timeZone: 'Australia/Brisbane' }) : 'Not yet signed in'}</td></tr>)}</tbody></table></div>{!administrators.length && <p>No additional administrators have been created.</p>}
   </>;
 }

@@ -55,3 +55,7 @@ Deploy the updated backend with access to the same MongoDB database. Collection 
 Member sessions now use the shared MongoDB `memberSessions` collection, following the same token hashing, eight-hour expiry, rotation and logout rules as admin sessions. Both signup and signin await session persistence before returning success. This keeps dashboard access available when later requests reach different backend instances. Existing memory-only member sessions require a fresh signin after deployment. Rate-limit counters still use instance memory.
 
 Management can select **Review pending memberships** from the dashboard to open the pending queue. Confirming a pending request records its dates and links an existing member account; the member dashboard then shows the accepted plan and expiry. A second confirmation is rejected. Deploy frontend and backend changes together to make these updates live.
+
+### Owner-only administrator creation
+
+Only the authenticated gym owner (the reserved application identity `environment-owner`) can create administrators. This identity works with either the environment owner login or the database-backed owner created by `admin:setup`. Other administrators receive HTTP 403 from `POST /api/admin/administrators`, even if they submit owner flags or IDs. The dashboard hides their creation form while retaining the administrator list and their existing management permissions. Existing sessions are subject to this rule on each request; no account migration is needed.

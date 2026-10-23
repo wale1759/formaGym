@@ -6,7 +6,7 @@ import { recordActivity } from './database.js';
 const originalOwnerPhoto = fileURLToPath(new URL('./data/owner-profile.jpg', import.meta.url));
 export async function adminProfile(req, store) {
   const photo = await store.find('profilePhotos', { id: req.adminId });
-  return { username: req.adminUsername, email: req.adminEmail, photoUrl: photo ? `/api/admin/profile/photo?v=${encodeURIComponent(photo.updatedAt)}` : req.adminId === 'environment-owner' && existsSync(originalOwnerPhoto) ? '/api/admin/profile/photo' : null };
+  return { canManageAdministrators: req.adminId === 'environment-owner', username: req.adminUsername, email: req.adminEmail, photoUrl: photo ? `/api/admin/profile/photo?v=${encodeURIComponent(photo.updatedAt)}` : req.adminId === 'environment-owner' && existsSync(originalOwnerPhoto) ? '/api/admin/profile/photo' : null };
 }
 export function registerAdminPhotos(app, store) {
   app.get('/api/admin/profile/photo', async (req, res, next) => {

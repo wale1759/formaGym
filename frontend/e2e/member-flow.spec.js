@@ -151,11 +151,69 @@ test('password visibility controls preserve values and work independently for me
   await check(page.locator('#signin-password'), 'password');
   await page.goto('/#Admin');
   await check(page.locator('#admin-login-password'), 'password');
-  await page.route('**/api/admin/activity', route => route.fulfill({ json: { counts: {}, members: [], memberships: [], activity: [] } }));
+  await page.route('**/api/admin/activity', route => route.fulfill({ json: { currentAdmin: { username: 'Owner', email: 'owner@example.com', canManageAdministrators: true }, counts: {}, members: [], memberships: [], activity: [] } }));
   await page.route('**/api/admin/administrators', route => route.fulfill({ json: { administrators: [] } }));
   await page.reload();
   await page.getByRole('button', { name: 'Administrators', exact: true }).click();
   await check(page.locator('#administrator-password'), 'password');
   await check(page.locator('#administrator-confirmPassword'), 'confirm password');
   await expect(page.getByRole('heading', { name: 'Add an administrator' })).toBeVisible();
+});
+
+test('only the owner sees the add-administrator form', async ({ page }) => {
+  let owner = false;
+  await page.route('**/api/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/member/session') return route.fulfill({ status: 401, json: {} });
+    if (path === '/api/pricing') return route.fulfill({ json: { prices, currency: 'NGN' } });
+    if (path === '/api/admin/activity') return route.fulfill({ json: {
+      currentAdmin: { username: 'Management', email: 'manager@example.com', canManageAdministrators: owner },
+      counts: {}, members: [], memberships: [], activity: [],
+    } });
+    if (path === '/api/admin/administrators') return route.fulfill({ json: { administrators: [] } });
+    return route.fulfill({ json: {} });
+  });
+  await page.goto('/#Admin');
+  await page.getByRole('button', { name: 'Administrators', exact: true }).click();
+  await expect(page.getByText('Only the gym owner can add administrators.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Add an administrator' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Create administrator', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Administrator accounts' })).toBeVisible();
+  owner = true;
+  await page.reload();
+  await page.getByRole('button', { name: 'Administrators', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Add an administrator' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create administrator', exact: true })).toBeVisible();
+});
+
+test('hero video plays inline on request and leaves the page content visible', async ({ page }) => {
+  await mockApi(page);
+  let videoRequests = 0;
+  page.on('request', request => { if (new URL(request.url()).pathname === '/assets/gym-video.mp4') videoRequests++; });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: /Built for your/ })).toBeVisible();
+  await expect(page.locator('.hero-video img')).toBeVisible();
+  expect(videoRequests).toBe(0);
+  await page.getByRole('button', { name: 'Play gym video' }).click();
+  const video = page.locator('.hero-video video');
+  await expect(video).toBeVisible();
+  await expect.poll(() => video.evaluate(element => !element.paused && element.currentTime > 0), { timeout: 20000 }).toBe(true);
+  expect(await video.evaluate(element => element.controls && element.playsInline)).toBe(true);
+  const copy = await page.locator('.hero-copy').boundingBox();
+  const panel = await page.locator('.hero-video').boundingBox();
+  expect(panel.y).toBeGreaterThanOrEqual(copy.y + copy.height);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await video.evaluate(element => element.pause());
+  expect(await video.evaluate(element => element.paused)).toBe(true);
+});
+
+test('hero video restores its poster and retry button when playback fails', async ({ page }) => {
+  await mockApi(page);
+  await page.route('**/assets/gym-video.mp4', route => route.abort());
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Play gym video' }).click();
+  await expect(page.getByRole('alert')).toContainText('The video could not play.');
+  await expect(page.locator('.hero-video img')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Play gym video' })).toBeVisible();
 });

@@ -263,7 +263,7 @@ test('MongoDB enforces schemas for direct inserts and updates outside the app', 
   } finally { await client.close(); }
 });
 
-test('administrators can create unique admin accounts; member/public access cannot', async () => {
+test('only the gym owner can create administrators; other admins retain management access', async () => {
   const extra = createApp({ store }).listen(0, '127.0.0.1');
   await new Promise(resolve => extra.once('listening', resolve));
   const url = `http://127.0.0.1:${extra.address().port}`;
@@ -312,8 +312,14 @@ test('administrators can create unique admin accounts; member/public access cann
     assert.equal(rows[0].signInCount, 1);
     assert.ok(rows[0].lastSignInAt);
     const second = await send('/api/admin/administrators', { ...account, username: 'second.manager', email: 'second@example.com' }, cookie);
-    assert.equal(second.status, 201);
-    assert.equal((await store.find('administrators', { username: 'second.manager' })).createdBy, admin.email);
+    assert.equal(second.status, 403);
+    assert.equal(await store.find('administrators', { username: 'second.manager' }), null);
+    assert.equal(profileDashboard.currentAdmin.canManageAdministrators, false);
+    const ownerDashboard = await (await fetch(url + '/api/admin/activity', { headers: { Cookie: ownerCookie } })).json();
+    assert.equal(ownerDashboard.currentAdmin.canManageAdministrators, true);
+    const delegated = await send('/api/admin/administrators', { ...account, username: 'second.manager', email: 'second@example.com', role: 'owner', id: 'environment-owner' }, cookie);
+    assert.equal(delegated.status, 403);
+    assert.equal((await send('/api/admin/administrators', { ...account, username: 'second.manager', email: 'second@example.com' }, ownerCookie)).status, 201);
     const byEmail = await send('/api/admin/login', { email: admin.email, password: account.password });
     assert.equal(byEmail.status, 200);
     assert.equal((await send('/api/admin/logout', {}, cookie)).status, 200);
@@ -613,5 +619,36 @@ test('signup and signin dashboards survive backend changes and show admin-approv
     if (first.listening) await new Promise(resolve => first.close(resolve));
     await new Promise(resolve => second.close(resolve));
     await connection.close();
+  }
+});
+
+test('database-backed gym owner can add administrators without environment login credentials', async () => {
+  const isolated = createStore({ uri: mongo.getUri(), database: 'owner_permissions_test' });
+  const { adminDocument } = await import('./setup-admin.js');
+  await isolated.insert('administrators', await adminDocument({ ADMIN_EMAIL: credentials.email, ADMIN_PASSWORD: credentials.password }));
+  const extra = createApp({ store: isolated }).listen(0, '127.0.0.1');
+  await new Promise(resolve => extra.once('listening', resolve));
+  const savedEmail = process.env.ADMIN_EMAIL, savedPassword = process.env.ADMIN_PASSWORD;
+  delete process.env.ADMIN_EMAIL;
+  delete process.env.ADMIN_PASSWORD;
+  try {
+    const url = `http://127.0.0.1:${extra.address().port}`;
+    const post = (path, body, cookie) => fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body) });
+    const ownerLogin = await post('/api/admin/login', credentials);
+    assert.equal(ownerLogin.status, 200);
+    const cookie = ownerLogin.headers.get('set-cookie').split(';')[0];
+    const profile = await (await fetch(url + '/api/admin/activity', { headers: { Cookie: cookie } })).json();
+    assert.equal(profile.currentAdmin.canManageAdministrators, true);
+    const newAdmin = { username: 'delegate', email: 'delegate@example.com', password: 'delegate-long-password', confirmPassword: 'delegate-long-password' };
+    assert.equal((await post('/api/admin/administrators', newAdmin, cookie)).status, 201);
+    const delegatedLogin = await post('/api/admin/login', { email: newAdmin.email, password: newAdmin.password });
+    const delegatedCookie = delegatedLogin.headers.get('set-cookie').split(';')[0];
+    assert.equal((await post('/api/admin/administrators', { ...newAdmin, username: 'third.admin', email: 'third@example.com' }, delegatedCookie)).status, 403);
+    assert.equal((await fetch(url + '/api/admin/activity', { headers: { Cookie: delegatedCookie } })).status, 200);
+  } finally {
+    if (savedEmail === undefined) delete process.env.ADMIN_EMAIL; else process.env.ADMIN_EMAIL = savedEmail;
+    if (savedPassword === undefined) delete process.env.ADMIN_PASSWORD; else process.env.ADMIN_PASSWORD = savedPassword;
+    await new Promise(resolve => extra.close(resolve));
+    await isolated.close();
   }
 });
