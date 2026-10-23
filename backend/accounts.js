@@ -1,3 +1,4 @@
+import { createAdminSessions, adminSessionDuration } from './adminSessions.js';
 import { currentMembership, upgradeOptions } from './membershipTiers.js';
 import { registerAdminPhotos, adminProfile } from './adminPhotos.js';
 import { validateAdministrator } from './validation/administrator.js';
@@ -11,7 +12,7 @@ import { recordActivity } from './database.js';
 
 const derive = promisify(scrypt);
 export function registerAccounts(app, { store }) {
-  const sessions = new Map();
+  const sessions = createAdminSessions(store);
   const attempts = new Map();
   const signupAttempts = new Map();
   const audit = event => recordActivity(store, event);
@@ -64,20 +65,20 @@ export function registerAccounts(app, { store }) {
       if (administrator) await store.incrementSignIn(administrator.id, 'administrators');
       await audit({ actor: 'admin', actorId: adminId, email: adminEmail, action: 'admin_login' });
       attempts.delete(req.ip);
-      for (const [key, session] of sessions) if (session.expires <= now) sessions.delete(key);
-      const token = randomBytes(32).toString('hex');
-      sessions.set(token, { id: adminId, username: isOwner ? 'Gym owner' : administrator.username, email: adminEmail, expires: now + 8 * 60 * 60 * 1000 });
-      res.cookie('forma_admin', token, { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/api/admin', maxAge: 8 * 60 * 60 * 1000 });
+
+      const previousToken = /(?:^|;\s*)forma_admin=([a-f0-9]+)/.exec(req.headers.cookie || '')?.[1];
+      const token = await sessions.create({ id: adminId, username: isOwner ? 'Gym owner' : administrator.username, email: adminEmail }, previousToken);
+      res.cookie('forma_admin', token, { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/api/admin', maxAge: adminSessionDuration });
       res.json({ authenticated: true });
     } catch (error) { next(error); }
   });
-  app.use('/api/admin', (req, res, next) => {
+  app.use('/api/admin', async (req, res, next) => {
     const token = /(?:^|;\s*)forma_admin=([a-f0-9]+)/.exec(req.headers.cookie || '')?.[1];
-    const session = sessions.get(token);
-    if (!session || session.expires <= Date.now()) { sessions.delete(token); return res.status(401).json({ error: 'Please sign in to admin.' }); }
+    const session = await sessions.find(token);
+    if (!session) return res.status(401).json({ error: 'Please sign in to admin.' });
     req.adminToken = token;
     req.adminEmail = session.email;
-    req.adminId = session.id;
+    req.adminId = session.adminId;
     req.adminUsername = session.username;
     next();
   });
@@ -115,7 +116,7 @@ export function registerAccounts(app, { store }) {
   });
   app.post('/api/admin/logout', async (req, res, next) => {
     try {
-      sessions.delete(req.adminToken);
+      await sessions.revoke(req.adminToken);
       res.clearCookie('forma_admin', { path: '/api/admin' });
       await audit({ actor: 'admin', email: req.adminEmail, action: 'admin_logout' });
       res.json({ authenticated: false });

@@ -514,3 +514,46 @@ test('pricing correction updates only the reversed default pair and preserves qu
   await store.put('settings', 'membership-pricing', { prices: { Starter: 16000, Standard: 18000, Premium: 29000, VIP: 40000 }, currency: 'NGN' });
   assert.equal(await correctTierPricing(store, credentials.email), false);
 });
+
+test('admin sessions survive a fresh backend instance, rotate and revoke across instances', async () => {
+  const connection = createStore({ uri: mongo.getUri(), database: 'forma_test' });
+  const first = createApp({ store }).listen(0, '127.0.0.1');
+  const second = createApp({ store: connection }).listen(0, '127.0.0.1');
+  await Promise.all([first, second].map(instance => new Promise(resolve => instance.once('listening', resolve))));
+  const send = (instance, path, cookie, body) => fetch(`http://127.0.0.1:${instance.address().port}${path}`, {
+    method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  try {
+    const login = await send(first, '/api/admin/login', null, credentials);
+    assert.equal(login.status, 200);
+    const cookie = login.headers.get('set-cookie').split(';')[0];
+    const token = cookie.split('=')[1];
+    const { createHash } = await import('node:crypto');
+    const id = createHash('sha256').update(token).digest('hex');
+    const record = await connection.find('adminSessions', { id });
+    assert.ok(record);
+    assert.equal(JSON.stringify(record).includes(token), false);
+    assert.equal(record.adminId, 'environment-owner');
+    await new Promise(resolve => first.close(resolve));
+    assert.equal((await send(second, '/api/admin/activity', cookie)).status, 200);
+    const rotated = await send(second, '/api/admin/login', cookie, credentials);
+    assert.equal(rotated.status, 200);
+    const nextCookie = rotated.headers.get('set-cookie').split(';')[0];
+    assert.notEqual(cookie, nextCookie);
+    assert.equal((await send(second, '/api/admin/activity', cookie)).status, 401);
+    assert.equal((await send(second, '/api/admin/logout', nextCookie, {})).status, 200);
+    assert.equal((await send(second, '/api/admin/activity', nextCookie)).status, 401);
+    const finalLogin = await send(second, '/api/admin/login', null, credentials);
+    const expiredCookie = finalLogin.headers.get('set-cookie').split(';')[0];
+    const expiredId = createHash('sha256').update(expiredCookie.split('=')[1]).digest('hex');
+    await connection.update('adminSessions', { id: expiredId }, { expiresAt: new Date(Date.now() - 1000).toISOString() });
+    assert.equal((await send(second, '/api/admin/activity', expiredCookie)).status, 401);
+    assert.equal(await connection.find('adminSessions', { id: expiredId }), null);
+    assert.equal((await send(second, '/api/admin/activity', 'forma_admin=invalid')).status, 401);
+  } finally {
+    if (first.listening) await new Promise(resolve => first.close(resolve));
+    await new Promise(resolve => second.close(resolve));
+    await connection.close();
+  }
+});

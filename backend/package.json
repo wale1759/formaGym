@@ -8,6 +8,7 @@
     "start": "node --env-file-if-exists=.env index.js",
     "lint": "eslint .",
     "test": "node --test *.test.js",
+    "admin:setup": "node --env-file-if-exists=.env setup-admin.js",
     "migrate": "node --env-file-if-exists=.env migrate.js",
     "pricing:correct": "node --env-file-if-exists=.env correct-tier-pricing.js"
   },

@@ -83,5 +83,21 @@ test('VIP member mobile layout has no public account actions and sign-out restor
   await page.locator('header').getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/#Signin$/);
   await expect(page.getByRole('heading', { name: 'Sign in to your member account' })).toBeVisible();
-  await expect(page.locator('header').getByRole('button', { name: 'Join now' })).toBeVisible();
+  await expect(page.locator('header').getByRole('button', { name: 'Join now' })).toHaveCount(0);
+  await expect(page.locator('.auth-page').getByRole('link', { name: 'Create an account' })).toBeVisible();
+});
+
+test('account navigation and layouts work on phones, tablets and laptops', async ({ page }) => {
+  await mockApi(page);
+  for (const width of [320, 390, 768, 1024, 1366, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of ['Signup', 'Signin']) {
+      await page.goto(`/#${route}`);
+      await expect(page.locator('.auth-page')).toBeVisible();
+      await expect(page.locator('header').getByRole('link', { name: /^(Sign up|Sign in)$/ })).toHaveCount(0);
+      await expect(page.locator('header').getByRole('button', { name: 'Join now' })).toHaveCount(0);
+      await expect(page.locator('.auth-page > p:last-child a')).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+    }
+  }
 });

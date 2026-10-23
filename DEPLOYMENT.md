@@ -29,3 +29,23 @@ In the **backend project's** Vercel environment settings, configure `MONGODB_URI
 Deploy the backend first and verify `/api/health` returns JSON 200. Then `/api/ready` must return JSON 200 to confirm MongoDB access. Deploy the frontend and check both endpoints again through the frontend domain to validate the rewrite. A function-invocation failure before `/api/health` means a backend startup/packaging problem; inspect backend Runtime Logs rather than changing database credentials blindly. A JSON 503 from `/api/ready` means the function started but database configuration/connectivity still needs attention.
 
 Important remaining deployment limitation: member/admin sessions and login rate limits currently live in process memory. Vercel can run multiple instances and restart them, so sessions can be lost or unrecognized across requests. A separately reviewed persistence change is needed before relying on this authentication setup for a public production launch. This routing fix does not introduce new authentication services or change your Atlas access policy.
+
+### Create a database-backed owner account
+
+The administrator schema is in `backend/schemas/administrators.js`. An `_id` alone is not an account: email, username, salted hash, role, application ID and timestamps are required.
+
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in local `backend/.env` (password: 12–128 characters). Optionally set `ADMIN_USERNAME` (defaults to `gym-owner`) and `ADMIN_MONGODB_ID` (defaults to the owner ObjectId supplied for this project). Run from the repository root:
+
+```sh
+npm run admin:setup --workspace backend
+```
+
+The command validates the existing schema, creates a uniquely salted scrypt hash, and inserts into `forma_fitness.administrators`. It never prints credentials or replaces an existing account. The record uses application ID `environment-owner` to preserve the owner's profile association. Do not paste a plaintext password into Atlas or commit `.env`.
+
+The deployed backend still needs `MONGODB_URI` and `MONGODB_DB` configured in Vercel's Production environment. A local `.env` is not uploaded. Once this database account exists, it can sign in using its email or username without the owner environment variables on Vercel. If `ADMIN_EMAIL` is configured there, the existing environment-owner login takes precedence for that email, so keep its password consistent or remove both owner variables to use database authentication.
+
+### Persistent management sessions
+
+Admin sessions now live in MongoDB `adminSessions`, shared across backend instances and redeployments. Only a SHA-256 digest of each random 256-bit token is stored; the token stays in the HTTP-only cookie. Sessions expire after eight hours, are checked on every admin request, and are deleted on logout. Signing in again from the same browser rotates its session. Expired records are rejected immediately and removed when encountered or during later sign-ins. An expiry index supports cleanup; it is not a TTL index because the project stores timestamps as ISO strings.
+
+Deploy the updated backend with access to the same MongoDB database. Collection validation and indexes are installed automatically. Existing memory-only admin sessions cannot migrate: administrators must sign in once after deployment. No new session secret environment variable is required. Member sessions and rate-limit counters still use instance memory and are outside this admin-session update.

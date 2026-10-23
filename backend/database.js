@@ -16,6 +16,7 @@ export function createStore({ uri = process.env.MONGODB_URI, database = process.
           await databaseHandle.collection(name).createIndex({ id: 1 }, { unique: true });
           await databaseHandle.collection(name).createIndex({ createdAt: -1 });
         }
+        await databaseHandle.collection('adminSessions').createIndex({ expiresAt: 1 });
         await databaseHandle.collection('users').createIndex({ email: 1 }, { unique: true });
         await databaseHandle.collection('administrators').createIndex({ email: 1 }, { unique: true });
         await databaseHandle.collection('administrators').createIndex({ username: 1 }, { unique: true });
@@ -48,6 +49,7 @@ export function createStore({ uri = process.env.MONGODB_URI, database = process.
     async ready() { await (await db()).command({ ping: 1 }); },
     async close() { await client?.close(); connection = undefined; },
     async list(type, filter = {}, limit = 500) { return (await collection(type)).find(filter, { projection: { _id: 0 } }).sort({ createdAt: -1 }).limit(limit).toArray(); },
+    async remove(type, filter) { return (await collection(type)).deleteMany(filter); },
     async count(type) { return (await collection(type)).countDocuments(); },
     async find(type, filter) { return (await collection(type)).findOne(filter, { projection: { _id: 0 } }); },
     async insert(type, data) {
