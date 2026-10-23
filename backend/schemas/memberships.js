@@ -6,7 +6,7 @@ const schema = document({
   status: { type: 'string', enum: ['pending', 'confirmed'], default: 'pending' },
   startDate: date, quotedPrice: amount, price: amount,
   currency: { type: 'string', enum: ['NGN', 'USD'], default: 'NGN' },
-  userId: text(100), confirmedAt: timestamp, confirmedBy: email, expiresAt: timestamp,
+  upgradeFromId: text(100), userId: text(100), confirmedAt: timestamp, confirmedBy: email, expiresAt: timestamp,
 }, ['email', 'plan', 'billing', 'startDate', 'status', 'currency']);
 // Active / scheduled / expired are derived from dates, never written by clients.
 schema.anyOf = [

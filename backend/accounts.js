@@ -1,3 +1,4 @@
+import { currentMembership, upgradeOptions } from './membershipTiers.js';
 import { registerAdminPhotos, adminProfile } from './adminPhotos.js';
 import { validateAdministrator } from './validation/administrator.js';
 import { getPricing, validatePrices } from './pricing.js';
@@ -126,6 +127,10 @@ export function registerAccounts(app, { store }) {
       if (!record) return res.status(404).json({ error: 'Membership inquiry not found.' });
       const errors = validateMembership(record);
       if (Object.keys(errors).length) return res.status(400).json({ error: 'This inquiry has missing or invalid plan details.', errors });
+      if (record.upgradeFromId && record.status === 'pending') {
+        const current = currentMembership(await store.list('memberships', { userId: record.userId }));
+        if (!current || !upgradeOptions(current).includes(record.plan)) return res.status(409).json({ error: 'This upgrade no longer matches the current plan. Ask them to submit a new request.' });
+      }
       const member = await store.find('users', { email: record.email });
       const updated = await store.update('memberships', { id: record.id, status: 'pending' }, { ...confirmedMembership(record, req.adminEmail, (await getPricing(store)).prices), ...(member ? { userId: member.id } : {}) });
       if (!updated) return res.status(409).json({ error: 'This membership has already been confirmed. Refresh the dashboard.' });

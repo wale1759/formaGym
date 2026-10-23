@@ -162,3 +162,13 @@ Join buttons now open a combined signup/plan-selection flow with password and co
 The dashboard reads `/api/member/dashboard`, showing only memberships linked to the authenticated account ID. It shows pending approval, active/scheduled/expired status, start/end dates and days remaining for active plans. It refreshes on focus, every minute and on request. Existing members can request another plan without registering again. The illustrative Alex dashboard has been replaced; the existing device booking diary remains separate.
 
 Older email-only inquiries are not automatically exposed to a newly registered account. Management can use **Link member account** on an accepted legacy inquiry after checking the applicant. Approval also links a matching registered account automatically. No email-verification service is currently configured, so management must verify the applicant before linking legacy records.
+
+## Member experience and release branches
+
+Signup, Signin and Dashboard are distinct pages. Signup creates an account and opens the membership dashboard; plan selection and requests take place inside that dashboard. Signin restores the member dashboard. Signed-in navigation contains Dashboard, Classes, Workouts, Nutrition and Sign out; public Signin, Signup, Join now, wishlist and bag controls are removed from the header.
+
+The dashboard selects the highest active tier when older confirmed periods overlap, displays its exact recorded price and start/expiry dates, and offers all higher tiers in Starter ? Standard ? Premium ? VIP order. Upgrade requests stay pending until management accepts them; submitting a request never changes existing access or historical quotes. Management approval of an outdated upgrade is rejected if the member now has an equal/higher plan. No automatic payments, refunds or prorating have been added.
+
+Upcoming classes use a compact responsive grid with existing project photography as illustrative placeholders; booking and waitlist dialogs remain connected. The schedule remains sample data by request. Email verification/password recovery are deferred; membership approval remains manual.
+
+Work is on the production branch, with main kept at the baseline until the release is approved. See DEPLOYMENT.md for the plan ? review ? implement workflow, local validation commands, deployment limits and pricing correction command. UI checks use npm run test:ui --workspace frontend with an installed Chrome browser. These tests mock the API and do not change the live database.

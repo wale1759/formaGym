@@ -41,7 +41,7 @@ test('confirmed memberships require confirmation data; pending records retain NG
   assert.throws(() => prepareDocument('memberships', { ...plan, plan: 'Unknown' }));
 });
 test('settings, contacts, newsletters and audits have distinct defaults', () => {
-  assert.equal(prepareDocument('settings', { id: 'membership-pricing' }).prices.Standard, 15000);
+  assert.equal(prepareDocument('settings', { id: 'membership-pricing' }).prices.Standard, 17000);
   assert.equal(prepareDocument('subscriptions', { email: 'test@example.com' }).status, 'subscribed');
   assert.equal(prepareDocument('contacts', { email: 'test@example.com', name: 'Test Member', message: 'Please contact me.' }).status, 'new');
   assert.equal(prepareDocument('activity', { action: 'page_view' }).actor, 'guest');

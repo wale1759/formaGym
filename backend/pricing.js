@@ -1,4 +1,4 @@
-export const defaultPrices = { Starter: 17000, Standard: 15000, Premium: 29000, VIP: 40000 };
+export const defaultPrices = { Starter: 15000, Standard: 17000, Premium: 29000, VIP: 40000 };
 export async function getPricing(store) {
   const saved = await store.find('settings', { id: 'membership-pricing' });
   return { currency: 'NGN', prices: saved?.prices || defaultPrices, yearlyMultiplier: 10 };

@@ -13,7 +13,7 @@
 | contacts | email, name, message, status | Name 2–80 characters; message 1–5,000 characters; new/resolved | status: new |
 | subscriptions | email, status | Newsletter subscriptions, separate from gym plans; subscribed/unsubscribed | status: subscribed |
 | activity | actor, actorId, email, action, target, details | Actor guest/anonymous/member/admin; action allowlist; bounded string metadata; no request bodies or passwords | actor: guest; optional identity and metadata strings: empty |
-| settings | id, prices, currency | Only membership-pricing ID; exactly four plan names; each amount a whole naira value 1–100,000,000; optional updatedBy admin email | NGN; Starter 17,000; Standard 15,000; Premium 29,000; VIP 40,000 |
+| settings | id, prices, currency | Only membership-pricing ID; exactly four plan names; each amount a whole naira value 1–100,000,000; optional updatedBy admin email | NGN; Starter 15,000; Standard 17,000; Premium 29,000; VIP 40,000 |
 
 All documents require a nonempty string `id`, `createdAt` and `updatedAt`. The application generates UUIDs and UTC ISO timestamp strings. Insert/import preserves supplied valid timestamps; updates refresh updatedAt. Date-only values use YYYY-MM-DD. MongoDB uses an internal `_id` in addition to the application id. Existing string IDs and dates remain compatible with the frontend and legacy import.
 

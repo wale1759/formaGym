@@ -12,3 +12,7 @@ backend/data/
 .npm-cache/
 *.log
 .DS_Store
+
+# Browser-test artifacts
+playwright-report/
+test-results/

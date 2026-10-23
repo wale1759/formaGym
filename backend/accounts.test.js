@@ -225,7 +225,7 @@ test('admin controls persistent NGN pricing and existing quotes keep their price
   const send = (route, method, body, cookie) => fetch(url + route, { method, headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body) });
   try {
     const defaults = await (await fetch(url + '/api/pricing')).json();
-    assert.deepEqual(defaults.prices, { Starter: 17000, Standard: 15000, Premium: 29000, VIP: 40000 });
+    assert.deepEqual(defaults.prices, { Starter: 15000, Standard: 17000, Premium: 29000, VIP: 40000 });
     assert.equal(defaults.currency, 'NGN');
     const inquiry = await send('/api/memberships', 'POST', { email: valid.email, plan: 'Premium', billing: 'monthly', startDate: '2026-10-27', quotedPrice: 29000 });
     const { id } = await inquiry.json();
@@ -395,7 +395,7 @@ test('management accepts a pending applicant without requiring a website account
     const { membership } = await response.json();
     assert.equal(membership.confirmedBy, credentials.email);
     assert.equal(membership.expiresAt, '2026-11-23T00:00:00.000Z');
-    assert.equal(membership.price, 17000);
+    assert.equal(membership.price, 15000);
     assert.equal(membership.userId, undefined);
     assert.equal(await store.find('users', { email }), null);
     assert.equal((await store.find('memberships', { id })).status, 'confirmed');
@@ -432,7 +432,7 @@ test('signup starts a member session and the dashboard shows only linked subscri
     assert.equal(saved.userId, user.id);
     assert.equal(saved.email, 'dashboard-member@example.com');
     assert.equal(saved.status, 'pending');
-    assert.equal(saved.quotedPrice, 15000);
+    assert.equal(saved.quotedPrice, 17000);
     assert.equal((await send('/api/member/memberships', payload, cookie)).status, 200);
     const pending = await (await view(cookie)).json();
     assert.equal(pending.memberships[0].status, 'pending');
@@ -460,4 +460,57 @@ test('signup starts a member session and the dashboard shows only linked subscri
     const restoredCookie = signin.headers.get('set-cookie').split(';')[0];
     assert.equal((await (await view(restoredCookie)).json()).memberships.length, 2);
   } finally { await new Promise(resolve => extra.close(resolve)); }
+});
+
+test('members can request only higher-tier upgrades and pending requests preserve the current plan', async () => {
+  const extra = createApp({ store }).listen(0, '127.0.0.1');
+  await new Promise(resolve => extra.once('listening', resolve));
+  const url = `http://127.0.0.1:${extra.address().port}`;
+  const send = (path, body, cookie) => fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body) });
+  const view = async cookie => (await fetch(url + '/api/member/dashboard', { headers: { Cookie: cookie } })).json();
+  try {
+    const signup = await send('/api/signup', { ...valid, email: 'upgrade-member@example.com' });
+    const cookie = signup.headers.get('set-cookie').split(';')[0];
+    const today = new Date().toISOString().slice(0,10);
+    const first = await send('/api/member/memberships', { plan: 'Starter', billing: 'monthly', startDate: today }, cookie);
+    const { id } = await first.json();
+    const owner = await send('/api/admin/login', credentials);
+    const ownerCookie = owner.headers.get('set-cookie').split(';')[0];
+    assert.equal((await send(`/api/admin/memberships/${id}/confirm`, {}, ownerCookie)).status, 200);
+    const dashboard = await view(cookie);
+    assert.equal(dashboard.currentMembershipId, id);
+    assert.deepEqual(dashboard.upgradeOptions, ['Standard', 'Premium', 'VIP']);
+    const request = { plan: 'Standard', billing: 'monthly', startDate: today, upgradeFromId: id };
+    assert.equal((await send('/api/member/memberships', request)).status, 401);
+    assert.equal((await send('/api/member/memberships', { ...request, upgradeFromId: 'someone-else' }, cookie)).status, 400);
+    assert.equal((await send('/api/member/memberships', { ...request, plan: 'Starter' }, cookie)).status, 400);
+    let vipId, standardId;
+    for (const plan of ['Standard', 'Premium', 'VIP']) {
+      const response = await send('/api/member/memberships', { ...request, plan }, cookie);
+      assert.equal(response.status, 201);
+      const result = await response.json();
+      if (plan === 'VIP') vipId = result.id;
+      if (plan === 'Standard') standardId = result.id;
+    }
+    assert.equal((await view(cookie)).currentMembershipId, id);
+    assert.equal((await send(`/api/admin/memberships/${vipId}/confirm`, {}, ownerCookie)).status, 200);
+    const upgraded = await view(cookie);
+    assert.equal(upgraded.currentMembershipId, vipId);
+    assert.deepEqual(upgraded.upgradeOptions, []);
+    assert.equal((await send('/api/member/memberships', { ...request, upgradeFromId: vipId, plan: 'Premium' }, cookie)).status, 400);
+    assert.equal((await send(`/api/admin/memberships/${standardId}/confirm`, {}, ownerCookie)).status, 409);
+  } finally { await new Promise(resolve => extra.close(resolve)); }
+});
+
+import { correctTierPricing } from './correct-tier-pricing.js';
+test('pricing correction updates only the reversed default pair and preserves quotes and custom values', async () => {
+  const quote = await store.insert('memberships', { email: 'quote@example.com', plan: 'Starter', billing: 'monthly', startDate: '2026-10-27', quotedPrice: 17000 });
+  await store.put('settings', 'membership-pricing', { prices: { Starter: 17000, Standard: 15000, Premium: 31000, VIP: 45000 }, currency: 'NGN' });
+  assert.equal(await correctTierPricing(store, credentials.email), true);
+  const corrected = await store.find('settings', { id: 'membership-pricing' });
+  assert.deepEqual(corrected.prices, { Starter: 15000, Standard: 17000, Premium: 31000, VIP: 45000 });
+  assert.equal((await store.find('memberships', { id: quote.id })).quotedPrice, 17000);
+  assert.equal(await correctTierPricing(store, credentials.email), false);
+  await store.put('settings', 'membership-pricing', { prices: { Starter: 16000, Standard: 18000, Premium: 29000, VIP: 40000 }, currency: 'NGN' });
+  assert.equal(await correctTierPricing(store, credentials.email), false);
 });
