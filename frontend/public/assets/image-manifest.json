@@ -1,0 +1,98 @@
+[
+    {
+        "width":  1536,
+        "file":  "assets/hero-nigeria.jpg",
+        "height":  1024,
+        "bytes":  339669
+    },
+    {
+        "width":  1374,
+        "file":  "assets/coach-tunde.jpg",
+        "height":  1145,
+        "bytes":  328811
+    },
+    {
+        "width":  1536,
+        "file":  "assets/coach-amara.jpg",
+        "height":  1024,
+        "bytes":  236143
+    },
+    {
+        "width":  1374,
+        "file":  "assets/coach-chidi.jpg",
+        "height":  1145,
+        "bytes":  303843
+    },
+    {
+        "width":  1536,
+        "file":  "assets/equipment-treadmill.jpg",
+        "height":  1024,
+        "bytes":  383931
+    },
+    {
+        "width":  1536,
+        "file":  "assets/equipment-cable.jpg",
+        "height":  1024,
+        "bytes":  375430
+    },
+    {
+        "width":  1536,
+        "file":  "assets/equipment-rig.jpg",
+        "height":  1024,
+        "bytes":  434595
+    },
+    {
+        "width":  1536,
+        "file":  "assets/product-tee.jpg",
+        "height":  1024,
+        "bytes":  425918
+    },
+    {
+        "width":  1536,
+        "file":  "assets/product-shoes.jpg",
+        "height":  1024,
+        "bytes":  377094
+    },
+    {
+        "width":  1536,
+        "file":  "assets/product-gloves.jpg",
+        "height":  1024,
+        "bytes":  515473
+    },
+    {
+        "width":  1536,
+        "file":  "assets/product-bottle.jpg",
+        "height":  1024,
+        "bytes":  197229
+    },
+    {
+        "width":  1536,
+        "file":  "assets/product-bag.jpg",
+        "height":  1024,
+        "bytes":  366734
+    },
+    {
+        "width":  1536,
+        "file":  "assets/product-shorts.jpg",
+        "height":  1024,
+        "bytes":  404141
+    },
+    {
+        "width":  1536,
+        "file":  "assets/meal-jollof.jpg",
+        "height":  1024,
+        "bytes":  547799
+    },
+    {
+        "width":  1536,
+        "file":  "assets/meal-smoothie.jpg",
+        "height":  1024,
+        "bytes":  413739
+    },
+    {
+        "width":  1536,
+        "file":  "assets/meal-ofada.jpg",
+        "height":  1024,
+        "bytes":  545838
+    }
+]

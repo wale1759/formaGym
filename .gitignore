@@ -1,0 +1,14 @@
+# Dependencies and builds
+node_modules/
+dist/
+
+# Ignore local environment files at any directory depth; keep examples.
+.env
+.env.*
+!.env.example
+
+# Local runtime data and caches
+backend/data/
+.npm-cache/
+*.log
+.DS_Store

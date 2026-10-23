@@ -1,0 +1,5 @@
+import { ArrowUpRight, Heart, Menu, ShoppingBag, X } from 'lucide-react';
+
+export default function Header({ pages, page, menu, setMenu, cart, go, setModal }) {
+  return (<header><a href="#" className="logo" onClick={()=>go('Home')}><img src="/assets/forma-logo-transparent.png" alt="FORMA" /></a><nav className={menu?'open':''}>{['Signin', ...pages.filter(n=>n!=='Shop')].map(n=><a className={page===n?'current':''} href={`#${n}`} key={n} onClick={()=>go(n)}>{n==='Signin'?'Sign in':n}</a>)}</nav><div className="header-actions"><button className="icon" aria-label="Wishlist" onClick={()=>setModal({type:'wishlist'})}><Heart size={19}/></button><button className="icon bag" aria-label={`Shopping bag, ${cart.length} items`} onClick={()=>setModal({type:'cart'})}><ShoppingBag size={19}/>{cart.length>0&&<span>{cart.length}</span>}</button><button className="join" onClick={()=>go('Membership')}>Join now <ArrowUpRight size={14}/></button><button className="icon mobile-menu" aria-label="Toggle navigation" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button></div></header>);
+}
