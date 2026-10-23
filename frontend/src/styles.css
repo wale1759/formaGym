@@ -235,3 +235,17 @@ main, main > *, .grid > *, .membership-overview > * { min-width: 0; }
 .hero-video-play:hover { background: var(--red); }
 .hero-video-play svg { flex-shrink: 0; }
 .hero-video-error { position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 2; margin: 0; padding: 12px; border-radius: 8px; background: #101114e6; color: #ffa1b0; font-size: 14px; }
+
+.trainer { display: flex; flex-direction: column; }
+.trainer > img { flex-shrink: 0; }
+.trainer .trainer-note { flex: 1; margin-block: 8px 14px; font-size: 14px; line-height: 1.7; }
+.trainer-focus { display: flex; flex-wrap: wrap; gap: 7px; padding: 0; margin: 0 0 12px; list-style: none; }
+.trainer-focus li { padding: 6px 9px; border: 1px solid #ffffff12; border-radius: 20px; background: #252a32; color: #c3c7cf; font-size: 12px; line-height: 1.4; }
+
+.instructor-bookings { margin-block: 32px; }
+.instructor-grid { margin-block: 20px; }
+.instructor-request { margin-block: 24px; }
+.instructor-bookings > h3 { margin-block: 24px 16px; }
+.status.booking-pending { color: #f1cf83; background: #6d4e172e; }
+.status.booking-confirmed { color: #8ee0b6; background: #22413566; }
+@media (max-width: 760px) { .instructor-grid.three { grid-template-columns: minmax(0,1fr); } .instructor-grid .trainer > img { height: 300px; } }

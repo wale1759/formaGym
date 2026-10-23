@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import InstructorBookings from './InstructorBookings.jsx';
+import { useCallback, useEffect, useState } from 'react';
 import MembershipRequest from './MembershipRequest.jsx';
 import UpcomingClasses from './UpcomingClasses.jsx';
 const money = (value, currency = 'NGN') => new Intl.NumberFormat('en-NG', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
@@ -39,6 +40,7 @@ export default function MemberDashboard({ enrollment = { selectedPlan: 'Starter'
     {pending.length > 0 && <div className="card membership-pending"><h3>Requests awaiting approval</h3>{pending.map(plan => <p key={plan.id}>{plan.plan} · {plan.billing} · Requested start {dateLabel(plan.startDate)}</p>)}<p className="fine">Your current subscription remains unchanged while management reviews a request.</p></div>}
     {current && <section className="member-upgrades"><div className="section-heading"><span className="eyebrow">YOUR NEXT LEVEL</span><h2>{options.length ? 'Upgrade your membership' : 'You have VIP access'}</h2><p>{options.length ? 'Choose any tier above your current plan. Management will review your request and confirm the access dates.' : 'VIP is our highest membership tier.'}</p></div><div className="upgrade-grid">{options.map(name => <article className="card" key={name}><h3>{name}</h3><p>A higher level of FORMA membership.</p><button className="button" onClick={() => setRequestPlan(name)}>Upgrade to {name}</button></article>)}</div></section>}
     {(!current || requestPlan) && <section className="card account-panel member-plan-request"><h3>{current ? `Request your ${requestPlan} upgrade` : 'Choose your membership plan'}</h3>{current && <button className="button secondary" onClick={() => setRequestPlan(null)}>Cancel upgrade request</button>}<MembershipRequest key={`${current?.id || 'new'}-${requestPlan || enrollment.selectedPlan}`} selectedPlan={requestPlan || enrollment.selectedPlan} billing={current?.billing || enrollment.billing} allowedPlans={current ? options : undefined} upgradeFromId={current?.id} onComplete={() => { setRequestPlan(null); setNotice('Your request is pending management approval. Your confirmed subscription dates will appear here once accepted.'); load(); }}/></section>}
+    <InstructorBookings active={!!current}/>
     <UpcomingClasses onBook={onBook}/>
     {data.memberships.length > 0 && <details className="membership-history"><summary>Membership history</summary><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th scope="col">Plan</th><th scope="col">Start</th><th scope="col">Expiry</th><th scope="col">Status</th></tr></thead><tbody>{data.memberships.map(plan => <tr key={plan.id}><td>{plan.plan} / {plan.billing}</td><td>{dateLabel(plan.startDate)}</td><td>{dateLabel(plan.expiresAt)}</td><td>{plan.status === 'pending' ? 'Pending approval' : plan.status}</td></tr>)}</tbody></table></div></details>}
   </section>;

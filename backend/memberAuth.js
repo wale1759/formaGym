@@ -1,3 +1,4 @@
+import { registerInstructorMember } from './instructorBookings.js';
 import { createSessionStore, sessionDuration as duration } from './sessionStore.js';
 import { currentMembership, upgradeOptions } from './membershipTiers.js';
 import { validateMembership, membershipStatus } from './validation/membership.js';
@@ -54,6 +55,7 @@ export function registerMemberAuth(app, store) {
     req.memberToken = token;
     next();
   });
+  registerInstructorMember(app, store);
   app.get('/api/member/session', (req, res) => res.json({ user: req.member }));
   app.get('/api/member/dashboard', async (req, res, next) => {
     try {

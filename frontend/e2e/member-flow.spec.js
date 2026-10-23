@@ -1,9 +1,11 @@
+import { instructors } from '../../backend/instructors.js';
 import { test, expect } from '@playwright/test';
 const user = { id: 'test-member', name: 'Test Member', email: 'member@example.com' };
 const prices = { Starter: 15000, Standard: 17000, Premium: 29000, VIP: 40000 };
 async function mockApi(page, { signedIn = false, plan = null } = {}) {
   let authenticated = signedIn;
   const requests = [];
+  const instructorBookings = [];
   const active = plan ? { id: 'current-plan', plan, billing: 'monthly', startDate: '2026-10-30', expiresAt: '2026-11-30T00:00:00Z', price: prices[plan], currency: 'NGN', status: 'active', daysRemaining: 20 } : null;
   const memberships = active ? [active] : [];
   await page.route('**/api/**', async route => {
@@ -15,6 +17,14 @@ async function mockApi(page, { signedIn = false, plan = null } = {}) {
     else if (!authenticated) { status = 401; body = { error: 'Please sign in.' }; }
     else if (path === '/api/member/session') body = { user };
     else if (path === '/api/member/dashboard') body = { user, memberships, currentMembershipId: active?.id || null, upgradeOptions: active ? ['Starter', 'Standard', 'Premium', 'VIP'].slice(['Starter', 'Standard', 'Premium', 'VIP'].indexOf(plan) + 1) : [] };
+    else if (path === '/api/member/instructors') body = { instructors, times: ['09:00', '10:30', '12:00', '14:00'], timeZone: 'Africa/Lagos' };
+    else if (path === '/api/member/instructor-bookings') {
+      if (route.request().method() === 'POST') {
+        const data = route.request().postDataJSON();
+        const booking = { id: 'instructor-request', ...data, instructorName: instructors.find(item => item.id === data.instructorId).name, status: 'pending' };
+        instructorBookings.push(booking); body = { booking }; status = 201;
+      } else body = { bookings: instructorBookings };
+    }
     else if (path === '/api/member/memberships') {
       const data = route.request().postDataJSON(); requests.push(data);
       memberships.push({ id: 'pending-plan', ...data, status: 'pending', currency: 'NGN', price: prices[data.plan], daysRemaining: null });
@@ -216,4 +226,60 @@ test('hero video restores its poster and retry button when playback fails', asyn
   await expect(page.getByRole('alert')).toContainText('The video could not play.');
   await expect(page.locator('.hero-video img')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Play gym video' })).toBeVisible();
+});
+
+test('instructor cards are private and active members can submit Nigerian-time requests', async ({ page }) => {
+  await mockApi(page, { signedIn: true, plan: 'Starter' });
+  await page.goto('/');
+  await expect(page.locator('.trainer')).toHaveCount(0);
+  await expect(page.locator('header').getByRole('link', { name: 'Trainers', exact: true })).toHaveCount(0);
+  await page.goto('/#Trainers');
+  await expect(page.locator('.trainer')).toHaveCount(0);
+  await page.goto('/#Dashboard');
+  await expect(page.locator('.instructor-grid .trainer')).toHaveCount(3);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Book Tunde Adeyemi', exact: true }).click();
+  const date = new Date(Date.now() + 2 * 86400000).toISOString().slice(0,10);
+  await page.getByLabel('Session date', { exact: true }).fill(date);
+  await expect(page.locator('.instructor-request')).toBeVisible();
+  await page.getByRole('combobox', { name: 'Session time', exact: true }).selectOption('10:30');
+  await page.getByRole('button', { name: 'Request instructor booking', exact: true }).click();
+  await expect(page.locator('.instructor-bookings [role="status"]')).toContainText('pending management approval');
+  await expect(page.getByRole('heading', { name: 'Your instructor requests' })).toBeVisible();
+  await expect(page.locator('.instructor-bookings')).toContainText('10:30 WAT');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('unapproved members do not see instructor cards or a booking form', async ({ page }) => {
+  await mockApi(page, { signedIn: true });
+  await page.goto('/#Dashboard');
+  await expect(page.getByText('Instructor booking unlocks when management approves your membership and your subscription is active.')).toBeVisible();
+  await expect(page.locator('.instructor-grid .trainer')).toHaveCount(0);
+  await expect(page.getByLabel('Session date', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Upcoming classes' })).toBeVisible();
+});
+
+test('ordinary administrators can accept instructor bookings in the new management section', async ({ page }) => {
+  const booking = { id: 'coaching-request', memberName: 'Test Member', email: 'member@example.com', instructorName: 'Amara Okafor', date: '2030-01-03', time: '12:00', status: 'pending' };
+  await page.route('**/api/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/member/session') return route.fulfill({ status: 401, json: {} });
+    if (path === '/api/pricing') return route.fulfill({ json: { prices, currency: 'NGN' } });
+    if (path === '/api/admin/activity') return route.fulfill({ json: { currentAdmin: { username: 'Manager', email: 'manager@example.com', canManageAdministrators: false }, counts: {}, members: [], memberships: [], activity: [] } });
+    if (path === '/api/admin/instructor-bookings') return route.fulfill({ json: { bookings: [booking] } });
+    if (path === '/api/admin/instructor-bookings/coaching-request/confirm') {
+      expect(route.request().method()).toBe('POST');
+      Object.assign(booking, { status: 'confirmed', confirmedBy: 'manager@example.com' });
+      return route.fulfill({ json: { booking } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.goto('/#Admin');
+  await page.getByRole('button', { name: 'Instructor bookings', exact: true }).click();
+  await expect(page.locator('.instructor-management')).toContainText('Amara Okafor');
+  await page.getByRole('button', { name: 'Accept booking', exact: true }).click();
+  await expect(page.locator('.instructor-management [role="status"]')).toContainText('Booking accepted');
+  await page.getByRole('button', { name: 'Confirmed requests', exact: true }).click();
+  await expect(page.locator('.instructor-management .admin-table')).toContainText('Accepted');
+  await expect(page.getByRole('button', { name: 'Accept booking', exact: true })).toHaveCount(0);
 });

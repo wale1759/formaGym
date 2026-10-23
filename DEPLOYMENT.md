@@ -59,3 +59,15 @@ Management can select **Review pending memberships** from the dashboard to open 
 ### Owner-only administrator creation
 
 Only the authenticated gym owner (the reserved application identity `environment-owner`) can create administrators. This identity works with either the environment owner login or the database-backed owner created by `admin:setup`. Other administrators receive HTTP 403 from `POST /api/admin/administrators`, even if they submit owner flags or IDs. The dashboard hides their creation form while retaining the administrator list and their existing management permissions. Existing sessions are subject to this rule on each request; no account migration is needed.
+
+### Subscriber-only instructor booking
+
+Instructor profiles and session requests now live in the member dashboard. Public navigation and the landing-page instructor section no longer show the profiles; the legacy `#Trainers` route points members to their dashboard. The protected instructor catalogue requires an approved, currently active subscription on every request, for every membership tier. Instructor names/descriptions come from `backend/instructors.js`.
+
+Members submit instructor ID, session date and one of the configured times. The backend derives identity from the session and keeps the request pending. All instructor sessions last 45 minutes and use Nigeria's `Africa/Lagos` timezone (WAT, UTC+1); `startsAt`/`endsAt` are stored as UTC ISO timestamps. The full session must fit within an active subscription. `shared/gym.js` centralises the gym timezone and the initial four session times. These are request times, not live availability promises.
+
+Both the owner and other administrators can open **Instructor bookings** and accept requests. Approval rechecks subscription coverage and rejects past/already accepted requests. Unique MongoDB indexes prevent an instructor or a member having two confirmed sessions in the same time slot, including concurrent approvals. Duplicate member requests return their existing record. Each request and acceptance is recorded in the activity log. Members can view only their own instructor requests and refresh to see approval status.
+
+The new `instructorBookings` collection is separate from existing class `bookings`. Its schema, indexes and audit action enums are installed by the normal database initialization; no existing account or class data is deleted or migrated. Public class requests remain available, while the old public personal-training submission path is rejected. Existing class records retain their stored date/time values; confirm historical timezone interpretation before any data migration. Current interface schedules and admin timestamps now display Nigeria time.
+
+Deploy the backend and frontend together from the reviewed production branch. Existing owner-only administrator creation, member sessions, membership approvals/upgrades, password controls and the hero video remain supported. Instructor session cancellation, rejection, calendar management and email notifications are outside this update.

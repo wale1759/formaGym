@@ -1,3 +1,4 @@
+import instructorBookings from './instructorBookings.js';
 import memberSessions from './memberSessions.js';
 import adminSessions from './adminSessions.js';
 import profilePhotos from './profilePhotos.js';
@@ -13,7 +14,7 @@ import subscriptions from './subscriptions.js';
 import activity from './activity.js';
 import settings from './settings.js';
 
-export const schemas = { memberSessions, adminSessions, profilePhotos, administrators, users, memberships, bookings, orders, contacts, subscriptions, activity, settings };
+export const schemas = { instructorBookings, memberSessions, adminSessions, profilePhotos, administrators, users, memberships, bookings, orders, contacts, subscriptions, activity, settings };
 const ajv = new Ajv({ allErrors: true, useDefaults: true, strict: false });
 const validators = Object.fromEntries(Object.entries(schemas).map(([name, schema]) => [name, ajv.compile(schema)]));
 export function prepareDocument(type, input, { touch = false } = {}) {
@@ -34,7 +35,7 @@ export function prepareDocument(type, input, { touch = false } = {}) {
     errors[field] = `Invalid ${type} field: ${field} (${issue.keyword}).`;
   }
   // Validate real calendar dates as well as the schema's string patterns.
-  for (const field of ['createdAt', 'updatedAt', 'lastSignInAt', 'confirmedAt', 'expiresAt', 'startDate', 'date']) {
+  for (const field of ['createdAt', 'updatedAt', 'lastSignInAt', 'confirmedAt', 'expiresAt', 'startDate', 'date', 'startsAt', 'endsAt']) {
     if (value[field] === undefined) continue;
     const parsed = new Date(value[field]);
     if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== String(value[field]).slice(0, 10)) errors[field] = `Enter a valid ${field}.`;

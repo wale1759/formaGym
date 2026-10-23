@@ -23,6 +23,7 @@ export function createApp({ store = createStore() } = {}) {
     app.post(`/api/${type}`, async (req, res, next) => {
       try {
         const body = req.body;
+        if (type === 'bookings' && (body?.instructorId !== undefined || /^(Train with |Personal training$)/i.test(body?.item || ''))) return res.status(403).json({ error: 'Request instructor sessions from your active member dashboard.' });
         if (!body || typeof body.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim())) return res.status(400).json({ error: 'Please enter a valid email address.' });
         if (type === 'bookings' && (!body.date || !body.time || !body.item)) return res.status(400).json({ error: 'Choose a session, date and time.' });
         if (type === 'orders' && (!Array.isArray(body.items) || !body.items.length)) return res.status(400).json({ error: 'Your bag is empty.' });

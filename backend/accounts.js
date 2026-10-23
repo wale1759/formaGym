@@ -1,3 +1,4 @@
+import { registerInstructorAdmin } from './instructorBookings.js';
 import { createAdminSessions, adminSessionDuration } from './adminSessions.js';
 import { currentMembership, upgradeOptions } from './membershipTiers.js';
 import { registerAdminPhotos, adminProfile } from './adminPhotos.js';
@@ -83,6 +84,7 @@ export function registerAccounts(app, { store }) {
     next();
   });
   registerAdminPhotos(app, store);
+  registerInstructorAdmin(app, store);
   app.get('/api/admin/administrators', async (req, res, next) => {
     try {
       const rows = await store.list('administrators');
