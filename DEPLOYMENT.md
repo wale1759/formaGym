@@ -9,7 +9,7 @@ Use plan → review → implement for future changes. Agree on the plan before i
 
 Work on `production`, run `npm run lint`, `npm test`, and `npm run build`, then review `git diff main...production`. After the user approves the release, merge `production` into `main`. This task does not publish a remote repository, merge into main, or deploy a website. A hosting target and Git remote have not been configured.
 
-Runtime configuration belongs in ignored `backend/.env` and `frontend/.env`, or the hosting service's environment settings. Follow `.env.example` for variable names. Credentials, MongoDB data, uploaded personal photos, dependencies and generated builds stay out of Git. When deploying, keep MongoDB access configured and run the Express backend with the built frontend. Secure cookies require HTTPS and NODE_ENV=production. Sessions currently live in server memory and require sign-in again after a restart.
+Runtime configuration belongs in ignored `backend/.env` and `frontend/.env`, or the hosting service's environment settings. Follow `.env.example` for variable names. Credentials, MongoDB data, uploaded personal photos, dependencies and generated builds stay out of Git. When deploying, keep MongoDB access configured and run the Express backend with the built frontend. Secure cookies require HTTPS and NODE_ENV=production. Member and administrator sessions persist in MongoDB and survive server restarts until expiry. Login rate limits remain in process memory.
 
 The approved plan prices are Starter NGN 15,000, Standard NGN 17,000, Premium NGN 29,000 and VIP NGN 40,000. For an existing database with the reversed Starter/Standard default prices, run `npm run pricing:correct --workspace backend`. The command is idempotent, preserves other customized prices and old quotes, and records an audit event. It changes only the exact reversed default pair, rather than overwriting manual pricing changes.
 
@@ -28,7 +28,7 @@ In the **backend project's** Vercel environment settings, configure `MONGODB_URI
 
 Deploy the backend first and verify `/api/health` returns JSON 200. Then `/api/ready` must return JSON 200 to confirm MongoDB access. Deploy the frontend and check both endpoints again through the frontend domain to validate the rewrite. A function-invocation failure before `/api/health` means a backend startup/packaging problem; inspect backend Runtime Logs rather than changing database credentials blindly. A JSON 503 from `/api/ready` means the function started but database configuration/connectivity still needs attention.
 
-Important remaining deployment limitation: member/admin sessions and login rate limits currently live in process memory. Vercel can run multiple instances and restart them, so sessions can be lost or unrecognized across requests. A separately reviewed persistence change is needed before relying on this authentication setup for a public production launch. This routing fix does not introduce new authentication services or change your Atlas access policy.
+Remaining deployment limitation: login rate limits live in process memory, so separate instances have separate counters and restarts reset them. Member and administrator sessions persist in MongoDB and work across instances. Shared rate limiting needs a separate implementation before relying on consistent limits across multiple instances.
 
 ### Create a database-backed owner account
 
@@ -71,3 +71,19 @@ Both the owner and other administrators can open **Instructor bookings** and acc
 The new `instructorBookings` collection is separate from existing class `bookings`. Its schema, indexes and audit action enums are installed by the normal database initialization; no existing account or class data is deleted or migrated. Public class requests remain available, while the old public personal-training submission path is rejected. Existing class records retain their stored date/time values; confirm historical timezone interpretation before any data migration. Current interface schedules and admin timestamps now display Nigeria time.
 
 Deploy the backend and frontend together from the reviewed production branch. Existing owner-only administrator creation, member sessions, membership approvals/upgrades, password controls and the hero video remain supported. Instructor session cancellation, rejection, calendar management and email notifications are outside this update.
+
+## Separate preview deployments
+
+The reviewed local source was deployed to the existing frontend and backend projects as separate Preview deployments. Production aliases were not promoted.
+
+- Frontend preview: https://frontend-balwjfnpr-sanmiafolabi1759-1000s-projects.vercel.app (Vercel Authentication remains enabled).
+- Backend preview: https://backend-1vpo80mo2-sanmiafolabi1759-1000s-projects.vercel.app (only this preview URL has a user-approved public-access exception).
+- Preview database: forma_fitness_preview, using the backend project's existing sensitive MongoDB URI. No production database records were copied.
+
+The backend exception has no automatic expiry. Remove it from the backend project's Deployment Protection Exceptions after preview testing. Keep other deployment protection settings unchanged.
+
+Both projects include shared source outside their app root. Local .vercelignore files exclude secrets, private runtime data, caches and generated output. The working preview was deployed with a temporary copy of the preview rewrite in frontend/vercel.json, then the original file was restored automatically. The preview rewrite is also recorded in ignored .vercel/frontend-preview.json for reference; passing that file alone as a CLI override did not replace the nested frontend routing during the first build. The tracked frontend/vercel.json still points to the original production backend. Do not use the preview override for a production release.
+
+The checkout is locally linked to the frontend Vercel project. Always specify --project backend or --project frontend and the intended environment explicitly when deploying, rather than relying on the current link.
+
+Verified after deployment: backend HTTP health and MongoDB readiness returned 200; unauthenticated member/admin access returned 401. The corrected frontend preview returned 200 for MongoDB readiness through its API rewrite. Full live signup, membership approval and administrator login were not exercised; the isolated preview database has no copied production accounts.

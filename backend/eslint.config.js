@@ -3,5 +3,9 @@ import globals from 'globals';
 export default [
   { ignores: ['data/**', 'node_modules/**'] },
   js.configs.recommended,
-  { files: ['**/*.js'], languageOptions: { globals: globals.node } },
+  {
+    files: ['**/*.js'],
+    languageOptions: { globals: globals.node },
+    rules: { curly: ['error', 'all'] },
+  },
 ];

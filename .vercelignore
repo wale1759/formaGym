@@ -1,0 +1,31 @@
+# Local secrets and account-specific runtime data must never be uploaded.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+backend/data/
+**/data/owner-profile.jpg
+
+# Local tools, reference material and test output are not deployment source.
+.git/
+.agents/
+.codex/
+.aws/
+node_modules/
+**/node_modules/
+playwright-report/
+test-results/
+**/playwright-report/
+**/test-results/
+images/
+references.jpg
+
+# Generated files and package caches are rebuilt on Vercel.
+.npm-cache/
+**/.npm-cache/
+dist/
+**/dist/
+
+.vercel/
+**/.vercel/

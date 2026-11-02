@@ -16,3 +16,11 @@ backend/data/
 # Browser-test artifacts
 playwright-report/
 test-results/
+.agents\skills
+
+# Vercel local account/project links
+.vercel/
+
+.vercel
+.env*
+docs

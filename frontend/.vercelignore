@@ -1,0 +1,17 @@
+# Keep local secrets and private files out of Vercel uploads.
+.env
+.env.*
+!.env.example
+data/owner-profile.jpg
+node_modules/
+test-results/
+playwright-report/
+
+# Generated files and package caches are rebuilt on Vercel.
+.npm-cache/
+**/.npm-cache/
+dist/
+**/dist/
+
+.vercel/
+**/.vercel/

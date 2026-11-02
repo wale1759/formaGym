@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "backend": {
+      "source": "Juadebfm/JuadebGabriel-Fullstack-AI-Skills",
+      "sourceType": "github",
+      "skillPath": "skills/backend/SKILL.md",
+      "computedHash": "6eaf042bde4018ad9443217af83bb1137d9f74baaf47aa077182bd904e519f4e"
+    },
+    "deployment": {
+      "source": "Juadebfm/JuadebGabriel-Fullstack-AI-Skills",
+      "sourceType": "github",
+      "skillPath": "skills/deployment/SKILL.md",
+      "computedHash": "5602a29526847571702b89a9d485d7e70b17034759c86a574d3f73d9911fa2d9"
+    },
+    "frontend": {
+      "source": "Juadebfm/JuadebGabriel-Fullstack-AI-Skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend/SKILL.md",
+      "computedHash": "ff80d48a6467ee19af21f888d9b25a65163b6b658f7870d8a609e0bcc547725e"
+    },
+    "project-research-requirements": {
+      "source": "Juadebfm/JuadebGabriel-Fullstack-AI-Skills",
+      "sourceType": "github",
+      "skillPath": "skills/project-research-requirements/SKILL.md",
+      "computedHash": "02d11f68d06cf1d9079a2576df6b83908f32e6e5dde52cb1bb71d842371e99c2"
+    }
+  }
+}

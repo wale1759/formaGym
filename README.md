@@ -73,7 +73,12 @@ The site logo uses `frontend/public/assets/forma-logo-transparent.png`: red symb
 gym/
   frontend/
     src/
-      main.jsx           # React screens and interactions
+      main.jsx           # Mounts the React application
+      App.jsx            # Navigation, shared state and screen composition
+      components/        # Screens and reusable interface components
+      hooks/             # Member sessions and optional browser persistence
+      data/              # Demonstration catalogs and image mappings
+      storage.js         # Validates and migrates saved browser lists
       styles.css         # Tailwind and responsive design system
     public/
       assets/            # Reference imagery and active transparent logo
@@ -93,7 +98,7 @@ gym/
     .env                 # Local environment (ignored)
     .env.example         # Environment template
     package.json
-    data/                # Local request storage (ignored)
+    data/                # Legacy migration sources and private owner photo (ignored)
   images/                # Original reference images
   references.jpg         # Reference contact sheet
   package.json           # Workspace commands
@@ -119,7 +124,7 @@ Use **Create account** in the footer to register a member account. Frontend vali
 
 Use **Admin sign in** in the footer to open gym management. Set `ADMIN_EMAIL` and a strong `ADMIN_PASSWORD` in your local `backend/.env`, then restart the backend. There are no default administrator credentials. These variables belong only on the server. The environment credentials provide the original management login. Additional administrators are created from the Administrators section and stored in MongoDB.
 
-The admin dashboard shows totals and the latest 500 member accounts, membership inquiries and audit events. The Members section shows registration timestamps, last sign-in and sign-in counts. Memberships shows requested plans, billing, confirmation, start and expiry dates. Activity filters member, admin, guest and anonymous events. Search and Refresh dashboard update the displayed records. Attendance and equipment telemetry are not recorded. Sessions use an HttpOnly, SameSite=Strict cookie, expire after eight hours and are cleared by server restarts. Sign out invalidates the session. Production cookies require HTTPS when `NODE_ENV=production`. Failed admin login attempts are limited to ten per IP per 15 minutes.
+The admin dashboard shows totals and the latest 500 member accounts, membership inquiries and audit events. The Members section shows registration timestamps, last sign-in and sign-in counts. Memberships shows requested plans, billing, confirmation, start and expiry dates. Activity filters member, admin, guest and anonymous events. Search and Refresh dashboard update the displayed records. Attendance and equipment telemetry are not recorded. Sessions use an HttpOnly, SameSite=Strict cookie, expire after eight hours and persist in MongoDB across server restarts. Sign out invalidates the session. Production cookies require HTTPS when `NODE_ENV=production`. Failed admin login attempts are limited to ten per IP per 15 minutes.
 
 Account and management routes are in `backend/accounts.js`; MongoDB access and indexes are in `backend/database.js`. Members can use Sign in before Membership in the header. Sign-in uses the registered email and password and restores sessions after refresh. Member sessions use a separate HttpOnly cookie, expire after eight hours, and never grant administrator access. Sign out from the sign-in page. Bookings still use the existing device diary. Sign-in validation lives in frontend/src/validation/signin.js and backend/validation/signin.js; backend/memberAuth.js handles authentication and limits login attempts to ten per IP per 15 minutes. Account validation and authorization tests run with `npm test` against an isolated temporary MongoDB server, leaving your configured database untouched. The first test run downloads a MongoDB binary.
 
@@ -135,7 +140,7 @@ Management can accept a pending inquiry when the plan, billing and start date ar
 
 The audit collection records registrations, successful/failed member and admin sign-ins, sign-outs, public form submissions, dashboard views and membership confirmations. Signed-in browsers can report page views, cart additions, wishlist changes and workout starts/completions; those events are labelled browser-reported and are not proof of attendance or payment. Guest form identities are unverified. Historic sign-in data cannot be reconstructed from old JSON records and appears Not recorded until a new sign-in.
 
-Sessions and login rate limits remain in server memory; sessions expire after eight hours and server restarts require signing in again. Use HTTPS in production (NODE_ENV=production enables Secure cookies). The environment account remains available as the original management account. Additional administrators have unique usernames/emails and individual passwords; all currently have full management access.
+Sessions are stored in MongoDB and expire after eight hours; server restarts preserve unexpired sessions. Login rate limits remain in server memory and reset on restart. Use HTTPS in production (NODE_ENV=production enables Secure cookies). The environment account remains available as the original management account. Additional administrators have unique usernames/emails and individual passwords; all can manage gym records, but only the owner can create administrators.
 
 `GET /api/health` reports the HTTP process status. `GET /api/ready` pings MongoDB and returns 503 when the database is unavailable or not configured. Signup is limited to ten attempts per IP per 15 minutes. The MongoDB migration and live connection still require your own `MONGODB_URI`; adding a URI does not automatically import JSON files.
 
@@ -147,7 +152,7 @@ Each MongoDB collection now has a schema under `backend/schemas/`. See [schema d
 
 ## Additional administrators
 
-Sign in to gym management and open Administrators. Enter a unique username (3?32 characters, starting with a letter), email and a 12?128 character password with confirmation. Usernames and emails are normalized to lowercase and unique among administrators. The original management email is reserved. New administrators can sign in on the same management page using their username or email. All administrators can view member records, change pricing, confirm memberships and create additional administrators. Public member signup never grants admin access.
+Sign in to gym management and open Administrators. Enter a unique username (3?32 characters, starting with a letter), email and a 12?128 character password with confirmation. Usernames and emails are normalized to lowercase and unique among administrators. The original management email is reserved. New administrators can sign in on the same management page using their username or email. All administrators can view member records, change pricing and confirm memberships. Only the owner can create additional administrators. Public member signup never grants admin access.
 
 Administrator accounts have their own MongoDB collection, schema and unique indexes. Passwords use randomly salted scrypt hashes, are never returned to the browser, and cannot be viewed after creation. Creation records the acting administrator; admin sign-ins and management actions record the individual account ID and email. The environment account is identified as environment-owner in audit history. No real staff accounts are automatically created by the implementation or tests.
 
@@ -172,3 +177,28 @@ The dashboard selects the highest active tier when older confirmed periods overl
 Upcoming classes use a compact responsive grid with existing project photography as illustrative placeholders; booking and waitlist dialogs remain connected. The schedule remains sample data by request. Email verification/password recovery are deferred; membership approval remains manual.
 
 Work is on the production branch, with main kept at the baseline until the release is approved. See DEPLOYMENT.md for the plan ? review ? implement workflow, local validation commands, deployment limits and pricing correction command. UI checks use npm run test:ui --workspace frontend with an installed Chrome browser. These tests mock the API and do not change the live database.
+
+## Maintaining the application
+
+Start at `frontend/src/main.jsx`, which mounts `App.jsx`. App owns navigation and state shared by screens; `components/HomePage.jsx` renders the landing content; `ProductCards.jsx` and `ShoppingDialogs.jsx` render shop cards and checkout dialogs. Shop products use named fields (`name`, `price`, `image`, `category`), and cart rows add `quantity` and `size`. `storage.js` validates saved lists, migrates older cart arrays, and restores catalog prices. Blocked browser storage leaves the app usable for the current visit.
+
+Member cookies use the `/api` path so signup can rotate an existing session. Login and logout also clear the old `/api/member` cookie during upgrades.
+
+Activity history is supplementary: if its database write fails, the server logs a fixed message without private data and preserves the main action result. This prevents an audit outage from prompting duplicate submissions, but history can have gaps. Activity records are not a transactional compliance log.
+
+Run `npm run format` to format application source and tests, or `npm run format:check` to check them without changes.
+
+Membership plan cards live in `components/MembershipPlans.jsx`; equipment cards live in `components/EquipmentCards.jsx`. Plans, equipment and workouts in `data/catalog.js` use named fields, so screens no longer depend on numeric array positions.
+
+## A reading path for a new maintainer
+
+1. Read this README and run the app locally. Start with a demo account, not real personal or payment details.
+2. Open `frontend/src/main.jsx`, then `App.jsx`: the first mounts React, and the second connects navigation, shared state and screens.
+3. Follow one screen into `frontend/src/components/`. Components receive values and callbacks through props; callbacks let them ask the parent to change state. `data/` holds sample content, `hooks/` handles reusable React behavior, and `storage.js` validates browser-saved data.
+4. Follow a form request to `backend/index.js`. Member and management routes are registered in `accounts.js` and `memberAuth.js`; instructor requests are in `instructorBookings.js`. Server checks decide access even when a browser hides a control.
+5. Read `backend/validation/` for form rules, `backend/schemas/` for stored document rules, and `database.js` for MongoDB operations. `sessionStore.js` stores hashed session tokens; the browser receives an HttpOnly cookie.
+6. Read the matching `*.test.js` or `frontend/e2e/member-flow.spec.js` before changing behavior. Backend tests use an isolated MongoDB server; browser tests mock API responses. Run lint, formatting checks, backend tests, build and browser tests before handing off a change.
+
+Keep changes small: use descriptive names, prefer direct components over helper wrappers, and add a comment when the reason for a decision is not obvious. Preserve the existing design and avoid adding layers for hypothetical future scale.
+
+New to web development? Start with [the learning guide](docs/LEARNING_GUIDE.md), which explains the vocabulary and follows a click through the app.
