@@ -1,0 +1,110 @@
+{
+  "results": [
+    {
+      "check": "public-screen",
+      "route": "Home",
+      "status": "rendered"
+    },
+    {
+      "check": "public-screen",
+      "route": "Membership",
+      "status": "rendered"
+    },
+    {
+      "check": "public-screen",
+      "route": "Equipment",
+      "status": "rendered"
+    },
+    {
+      "check": "public-screen",
+      "route": "Shop",
+      "status": "rendered"
+    },
+    {
+      "check": "public-screen",
+      "route": "Workouts",
+      "status": "rendered"
+    },
+    {
+      "check": "public-screen",
+      "route": "Nutrition",
+      "status": "rendered"
+    },
+    {
+      "check": "public-screen",
+      "route": "Bookings",
+      "status": "rendered"
+    },
+    {
+      "check": "public-screen",
+      "route": "Signin",
+      "status": "rendered"
+    },
+    {
+      "check": "public-screen",
+      "route": "Signup",
+      "status": "rendered"
+    },
+    {
+      "check": "mobile-navigation",
+      "status": "passed"
+    },
+    {
+      "check": "browser-signup-cookie",
+      "status": "passed",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Strict",
+      "path": "/api"
+    },
+    {
+      "check": "session-refresh",
+      "status": "passed"
+    },
+    {
+      "check": "member-access-and-request",
+      "status": "passed",
+      "identity": "session-derived",
+      "membershipStatus": "pending",
+      "adminAccess": 401,
+      "instructorAccess": 403
+    },
+    {
+      "check": "two-member-isolation",
+      "status": "passed"
+    },
+    {
+      "check": "browser-logout-login",
+      "status": "passed"
+    },
+    {
+      "check": "error-and-secret-exposure",
+      "path": "/api/unknown-review-route",
+      "status": 404,
+      "secretLeak": false
+    },
+    {
+      "check": "error-and-secret-exposure",
+      "path": "/.env",
+      "status": 404,
+      "secretLeak": false
+    },
+    {
+      "check": "error-and-secret-exposure",
+      "path": "/backend/.env",
+      "status": 404,
+      "secretLeak": false
+    },
+    {
+      "check": "browser-runtime",
+      "pageErrors": 0,
+      "serverErrors": 0
+    },
+    {
+      "check": "preview-test-cleanup",
+      "status": "passed",
+      "accounts": 2
+    }
+  ],
+  "browserErrors": []
+}

@@ -1,0 +1,14 @@
+{
+  "backend": {
+    "id": "dpl_9PqTuVSQR8vGv9NAh4HXhVDk6v9a",
+    "url": "https://backend-1vpo80mo2-sanmiafolabi1759-1000s-projects.vercel.app",
+    "database": "forma_fitness_preview",
+    "protected": false,
+    "exception": "Public until manually revoked, explicitly approved by user"
+  },
+  "frontend": {
+    "id": "dpl_FThidyapPUf6xj5TauqyCcdraHE9",
+    "url": "https://frontend-balwjfnpr-sanmiafolabi1759-1000s-projects.vercel.app",
+    "protected": true
+  }
+}

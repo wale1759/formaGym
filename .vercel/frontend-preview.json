@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://backend-1vpo80mo2-sanmiafolabi1759-1000s-projects.vercel.app/api/:path*"
+    }
+  ]
+}
