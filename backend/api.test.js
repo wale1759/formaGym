@@ -8,3 +8,10 @@ test('health endpoint is available',async()=>{const response=await fetch(`${base
 test('invalid email is rejected without persistence',async()=>{for(const route of ['bookings','orders','memberships','contacts','subscriptions']){const response=await fetch(`${base}/api/${route}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'invalid'})});assert.equal(response.status,400);}});
 test('incomplete booking and empty order are rejected',async()=>{for(const route of ['bookings','orders']){const response=await fetch(`${base}/api/${route}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'test@example.com',items:[]})});assert.equal(response.status,400);}});
 test('unknown API route returns JSON 404',async()=>{const response=await fetch(`${base}/api/missing`);assert.equal(response.status,404);assert.deepEqual(await response.json(),{error:'Endpoint not found'});});
+
+
+test('Vercel can import the Express application as the default export', async () => {
+  const module = await import('./index.js');
+  assert.equal(module.default, module.app);
+  assert.equal(typeof module.default, 'function');
+});

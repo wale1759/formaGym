@@ -12,3 +12,6 @@ backend/data/
 .npm-cache/
 *.log
 .DS_Store
+
+# Local Vercel project links and review credentials
+.vercel/

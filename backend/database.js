@@ -1,3 +1,4 @@
+import { databaseDiagnostics } from './databaseDiagnostics.js';
 import { schemas, installSchemas, prepareDocument } from './schemas/index.js';
 import { MongoClient } from 'mongodb';
 
@@ -35,6 +36,7 @@ export function createStore({ uri = process.env.MONGODB_URI, database = process.
           : error.code === 13 ? 'Database setup permission denied. Check the MongoDB user permissions.'
           : 'Database initialization failed. Check the server database configuration.';
         console.error('Database initialization failed:', error.name, 'code:', error.code || 'unavailable');
+        console.error('Database diagnostics:', JSON.stringify(databaseDiagnostics(error)));
         throw Object.assign(new Error(message), { status: 503 });
       });
     }

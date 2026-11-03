@@ -1,0 +1,27 @@
+# Local secrets, private runtime files and tool state.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+.vercel/
+**/.vercel/
+.agents/
+.codex/
+.aws/
+backend/data/
+# Dependencies, generated files, caches and test output.
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.npm-cache/
+**/.npm-cache/
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+images/
+references.jpg
+
+/data/

@@ -150,11 +150,21 @@ export function registerAccounts(app, { store }) {
       await audit({ actor: 'admin', email: req.adminEmail, action: 'dashboard_viewed' });
       const types = ['users', 'bookings', 'memberships', 'orders', 'contacts', 'subscriptions'];
       const counts = Object.fromEntries(await Promise.all(types.map(async type => [type, await store.count(type)])));
-      const [users, memberships, activity] = await Promise.all([store.list('users'), store.list('memberships'), store.list('activity')]);
+      const [users, memberships, activity, bookings] = await Promise.all([
+        store.list('users'),
+        store.list('memberships'),
+        store.list('activity'),
+        store.list('bookings'),
+      ]);
       const members = users.map(({ id, name, email, createdAt, lastSignInAt, signInCount }) => ({ id, name, email, createdAt, lastSignInAt, signInCount: signInCount || 0 }));
       const plans = memberships.map(({ id, email, plan, billing, startDate, createdAt, confirmedAt, confirmedBy, expiresAt, price, currency, status, userId }) => ({ id, userId, email, plan, billing, startDate, createdAt, confirmedAt, confirmedBy, expiresAt, price, currency, status: membershipStatus({ status, startDate, expiresAt }) }));
+      // Send only the booking fields that the management screen needs.
+      const bookingRows = bookings.map(({ id, email, item, date, time, status, waitlist, createdAt }) => ({
+        id, email, item, date, time, createdAt,
+        status: status || (waitlist ? 'waitlisted' : 'confirmed'),
+      }));
       // Return only allowlisted audit fields. No submitted passwords or request bodies.
-      res.json({ currentAdmin: await adminProfile(req, store), pricing: await getPricing(store), counts, members, memberships: plans, activity: activity.map(({ id, actor, actorId, email, action, target, details, createdAt }) => ({ id, actor, actorId, email, action, target, details, createdAt })) });
+      res.json({ currentAdmin: await adminProfile(req, store), pricing: await getPricing(store), counts, members, memberships: plans, bookings: bookingRows, activity: activity.map(({ id, actor, actorId, email, action, target, details, createdAt }) => ({ id, actor, actorId, email, action, target, details, createdAt })) });
     } catch (error) { next(error); }
   });
 }

@@ -162,3 +162,9 @@ Join buttons now open a combined signup/plan-selection flow with password and co
 The dashboard reads `/api/member/dashboard`, showing only memberships linked to the authenticated account ID. It shows pending approval, active/scheduled/expired status, start/end dates and days remaining for active plans. It refreshes on focus, every minute and on request. Existing members can request another plan without registering again. The illustrative Alex dashboard has been replaced; the existing device booking diary remains separate.
 
 Older email-only inquiries are not automatically exposed to a newly registered account. Management can use **Link member account** on an accepted legacy inquiry after checking the applicant. Approval also links a matching registered account automatically. No email-verification service is currently configured, so management must verify the applicant before linking legacy records.
+
+## Viewing bookings as an administrator
+
+Sign in to gym management and select **Bookings**. The section lists the latest 500 saved class and equipment reservations, newest submissions first. Search by contact email, booked item, date, time or reference ID, and filter confirmed or waitlisted requests. Use **Refresh dashboard** to load newer records. Empty lists and searches with no matches have separate messages.
+
+`frontend/src/components/AdminBookings.jsx` draws the list and filters the supplied rows. The authenticated `/api/admin/activity` response supplies an explicit list of booking fields. Contact emails come from public forms and are not proof of member identity. Session dates and times are shown as booked; submission timestamps follow the dashboard timezone. This section does not change bookings, cancel reservations or promote waitlisted requests.

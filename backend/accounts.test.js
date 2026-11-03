@@ -461,3 +461,69 @@ test('signup starts a member session and the dashboard shows only linked subscri
     assert.equal((await (await view(restoredCookie)).json()).memberships.length, 2);
   } finally { await new Promise(resolve => extra.close(resolve)); }
 });
+
+
+test('only administrators can read the booking rows in the dashboard', async () => {
+  const extra = createApp({ store }).listen(0, '127.0.0.1');
+  await new Promise((resolve) => extra.once('listening', resolve));
+  const url = 'http://127.0.0.1:' + extra.address().port;
+  const login = (path, body) =>
+    fetch(url + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  try {
+    const confirmed = await store.insert('bookings', {
+      email: 'booking-review@example.com',
+      item: 'Strength class',
+      date: '2026-11-10',
+      time: '09:00',
+    });
+    const waitlisted = await store.insert('bookings', {
+      email: 'waiting-review@example.com',
+      item: 'Performance treadmill',
+      date: '2026-11-11',
+      time: '10:30',
+      waitlist: true,
+    });
+    assert.equal((await fetch(url + '/api/admin/activity')).status, 401);
+    const memberLogin = await login('/api/member/login', {
+      email: valid.email,
+      password: valid.password,
+    });
+    assert.equal(memberLogin.status, 200);
+    const memberCookie = memberLogin.headers.get('set-cookie').split(';')[0];
+    const forbidden = await fetch(url + '/api/admin/activity', {
+      headers: { Cookie: memberCookie },
+    });
+    assert.equal(forbidden.status, 401);
+    assert.equal((await forbidden.json()).bookings, undefined);
+    const adminLogin = await login('/api/admin/login', credentials);
+    assert.equal(adminLogin.status, 200);
+    const adminCookie = adminLogin.headers.get('set-cookie').split(';')[0];
+    const response = await fetch(url + '/api/admin/activity', {
+      headers: { Cookie: adminCookie },
+    });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    const dashboard = await response.json();
+    const saved = dashboard.bookings.find(
+      (booking) => booking.id === confirmed.id,
+    );
+    assert.equal(saved.item, 'Strength class');
+    assert.equal(saved.email, 'booking-review@example.com');
+    assert.equal(saved.status, 'confirmed');
+    assert.equal(
+      dashboard.bookings.find((booking) => booking.id === waitlisted.id).status,
+      'waitlisted',
+    );
+    assert.deepEqual(
+      Object.keys(saved).sort(),
+      ['id', 'email', 'item', 'date', 'time', 'status', 'createdAt'].sort(),
+    );
+    assert.ok(dashboard.counts.bookings >= 2);
+  } finally {
+    await new Promise((resolve) => extra.close(resolve));
+  }
+});
